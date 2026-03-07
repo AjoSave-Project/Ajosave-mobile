@@ -26,6 +26,7 @@ function WalletContent() {
   const [showFundModal, setShowFundModal] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
   const [isFunding, setIsFunding] = useState(false);
+  const [settingPrimaryId, setSettingPrimaryId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWallet();
@@ -57,6 +58,34 @@ function WalletContent() {
     }
   };
 
+  const handleLongPressAccount = (account: BankAccount) => {
+    if (account.isPrimary) {
+      Alert.alert('Already Primary', `${account.bankName} is already your primary account.`);
+      return;
+    }
+    Alert.alert(
+      'Set as Primary',
+      `Make ${account.bankName} (${account.accountNumber.slice(-4).padStart(account.accountNumber.length, '•')}) your primary account?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Set Primary',
+          onPress: async () => {
+            try {
+              setSettingPrimaryId(account._id);
+              await WalletService.setPrimaryBankAccount(account._id);
+              await loadBankAccounts();
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'Failed to update primary account');
+            } finally {
+              setSettingPrimaryId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleFundWallet = () => {
     const amount = parseFloat(fundAmount);
     if (!amount || amount < 100) {
@@ -67,32 +96,47 @@ function WalletContent() {
       Alert.alert('Error', 'User email not found');
       return;
     }
+    // Close modal first, then open Paystack after animation completes
     setShowFundModal(false);
-    setIsFunding(true);
-    const ref = `FUND-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    popup.checkout({
-      email: user.email,
-      amount: amount * 100,
-      reference: ref,
-      onSuccess: async (response: any) => {
-        try {
-          const reference = response?.transactionRef?.reference || response?.reference || ref;
-          await WalletService.verifyFunding(reference);
-          await refreshWallet();
-          await fetchTransactions();
-          setFundAmount('');
-          Alert.alert('Success', 'Wallet funded successfully!');
-        } catch (err: any) {
-          Alert.alert('Error', err.message || 'Failed to verify payment');
-        } finally {
+
+    setTimeout(() => {
+      setIsFunding(true);
+      const ref = `FUND-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      popup.checkout({
+        email: user.email,
+        amount: amount, // SDK multiplies by 100 internally
+        reference: ref,
+        onSuccess: async (response: any) => {
+          try {
+            console.log('[Paystack onSuccess]', JSON.stringify(response));
+            const reference =
+              response?.reference ||
+              response?.transaction ||
+              ref;
+            console.log('[verifyFunding] using reference:', reference);
+            await WalletService.verifyFunding(reference);
+            await refreshWallet();
+            await fetchTransactions();
+            setFundAmount('');
+            Alert.alert('Success', 'Wallet funded successfully!');
+          } catch (err: any) {
+            console.error('[verifyFunding error]', err);
+            Alert.alert('Error', err.message || 'Failed to verify payment');
+          } finally {
+            setIsFunding(false);
+          }
+        },
+        onCancel: () => {
           setIsFunding(false);
-        }
-      },
-      onCancel: () => {
-        setIsFunding(false);
-        setFundAmount('');
-      },
-    });
+          setFundAmount('');
+        },
+        onError: (err: any) => {
+          setIsFunding(false);
+          setFundAmount('');
+          Alert.alert('Payment Error', err?.message || 'An error occurred. Please try again.');
+        },
+      });
+    }, 400); // wait for modal close animation
   };
 
   const filteredTransactions = Array.isArray(transactions)
@@ -232,7 +276,15 @@ function WalletContent() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.bankAccountsList}>
                 {bankAccounts.map((account) => (
-                  <View key={account._id} style={styles.bankAccountCard}>
+                  <Pressable
+                    key={account._id}
+                    style={styles.bankAccountCard}
+                    onLongPress={() => handleLongPressAccount(account)}
+                    delayLongPress={400}
+                  >
+                    {settingPrimaryId === account._id ? (
+                      <ActivityIndicator color="#FFFFFF" style={styles.cardLoader} />
+                    ) : null}
                     {account.isPrimary ? (
                       <View style={styles.primaryBadge}>
                         <Text style={styles.primaryBadgeText}>Primary</Text>
@@ -241,7 +293,7 @@ function WalletContent() {
                     <Text style={styles.bankName}>{account.bankName}</Text>
                     <Text style={styles.accountNumber}>{formatAccountNumber(account.accountNumber)}</Text>
                     <Text style={styles.accountName}>{account.accountName}</Text>
-                  </View>
+                  </Pressable>
                 ))}
                 <Pressable style={styles.addBankCardSmall} onPress={() => router.push('/add-bank-account')}>
                   <Ionicons name="add" size={28} color={Colors.primary.main} />
@@ -438,6 +490,7 @@ const styles = StyleSheet.create({
   addBankText: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
   bankAccountsList: { flexDirection: 'row', gap: Spacing.md },
   bankAccountCard: { width: 180, backgroundColor: Colors.primary.main, padding: Spacing.md, borderRadius: 12, position: 'relative' },
+  cardLoader: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 },
   primaryBadge: {
     position: 'absolute',
     top: Spacing.sm,

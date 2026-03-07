@@ -139,6 +139,31 @@ class TransactionServiceClass {
   }
 
   /**
+   * Pay group contribution from wallet balance
+   */
+  async createWalletContribution(
+    groupId: string,
+    amount: number
+  ): Promise<{
+    transaction: Transaction;
+    wallet: { availableBalance: number; totalContributions: number };
+    group: { totalPool: number; name: string };
+  }> {
+    const response = await ApiService.post<{
+      transaction: Transaction;
+      wallet: any;
+      group: any;
+    }>('/transactions/contribution/wallet', { groupId, amount });
+
+    if (response.success && response.data) {
+      await this.getTransactions();
+      return response.data;
+    }
+
+    throw new Error('Failed to process wallet contribution');
+  }
+
+  /**
    * Get a specific transaction by ID
    * @param transactionId - Transaction ID
    * @returns Transaction details

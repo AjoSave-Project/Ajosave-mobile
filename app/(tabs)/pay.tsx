@@ -11,6 +11,7 @@ import {
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PaystackProvider, usePaystack } from 'react-native-paystack-webview';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -24,7 +25,8 @@ import type { Group } from '@/services/groupService';
 
 const PAYSTACK_KEY = process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
 
-// Inner component that uses the usePaystack hook
+type PaymentMethod = 'wallet' | 'card';
+
 function PayContent() {
   const { groups, fetchGroups } = useGroups();
   const { wallet, refreshWallet } = useWallet();
@@ -32,6 +34,7 @@ function PayContent() {
   const { popup } = usePaystack();
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wallet');
   const [isProcessing, setIsProcessing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -45,6 +48,7 @@ function PayContent() {
   const activeGroups = Array.isArray(groups) ? groups.filter((g: Group) => g.status === 'active' || g.status === 'pending') : [];
   const selectedGroup = activeGroups.find((g: Group) => g._id === selectedGroupId) ?? null;
   const contributionAmount = selectedGroup?.contributionAmount ?? 0;
+  const hasEnoughBalance = (wallet?.availableBalance ?? 0) >= contributionAmount;
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -55,13 +59,47 @@ function PayContent() {
     }
   };
 
-  const handleInitiatePayment = () => {
+  const handleWalletPayment = async () => {
+    if (!selectedGroup) return;
+    if (!hasEnoughBalance) {
+      Alert.alert('Insufficient Balance', `Your wallet balance (${formatCurrency(wallet?.availableBalance ?? 0)}) is less than the contribution amount (${formatCurrency(contributionAmount)}). Please fund your wallet first.`);
+      return;
+    }
+    Alert.alert(
+      'Confirm Payment',
+      `Pay ${formatCurrency(contributionAmount)} to ${selectedGroup.name} from your wallet?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pay Now',
+          onPress: async () => {
+            setIsProcessing(true);
+            try {
+              await TransactionService.createWalletContribution(selectedGroupId!, contributionAmount);
+              await Promise.all([refreshWallet(), fetchGroups()]);
+              Alert.alert(
+                'Payment Successful',
+                `Your contribution of ${formatCurrency(contributionAmount)} to ${selectedGroup.name} was processed.`,
+                [{ text: 'OK', onPress: () => setSelectedGroupId(null) }]
+              );
+            } catch (err: any) {
+              Alert.alert('Payment Failed', err?.message || 'Failed to process payment');
+            } finally {
+              setIsProcessing(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleCardPayment = () => {
     if (!selectedGroup || !user?.email) return;
     const ref = generatePaymentReference();
 
     popup.checkout({
       email: user.email,
-      amount: contributionAmount * 100, // Paystack expects kobo
+      amount: contributionAmount,
       reference: ref,
       onSuccess: async (response) => {
         setIsProcessing(true);
@@ -74,10 +112,11 @@ function PayContent() {
             `Your contribution of ${formatCurrency(contributionAmount)} to ${selectedGroup.name} was recorded.\n\nRef: ${txRef}`,
             [{ text: 'OK', onPress: () => setSelectedGroupId(null) }]
           );
-        } catch {
+        } catch (err: any) {
+          console.error('[createContribution error]', err);
           Alert.alert(
             'Payment Received',
-            `Payment was successful but we could not record your contribution automatically.\n\nSave your reference: ${txRef}\n\nContact support if this persists.`,
+            `Payment was successful but we could not record your contribution automatically.\n\nError: ${err?.message || 'Unknown error'}\n\nSave your reference: ${txRef}\n\nContact support if this persists.`,
             [{ text: 'OK' }]
           );
         } finally {
@@ -93,7 +132,15 @@ function PayContent() {
     });
   };
 
-  const canPay = !!selectedGroupId && !!user?.email && !isProcessing;
+  const handlePay = () => {
+    if (paymentMethod === 'wallet') {
+      handleWalletPayment();
+    } else {
+      handleCardPayment();
+    }
+  };
+
+  const canPay = !!selectedGroupId && !isProcessing && (paymentMethod === 'card' ? !!user?.email : true);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
@@ -107,6 +154,33 @@ function PayContent() {
           <Text style={styles.balanceAmount}>
             {formatCurrency(wallet?.availableBalance ?? 0)}
           </Text>
+        </View>
+
+        {/* Payment method toggle */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Method</Text>
+          <View style={styles.methodToggle}>
+            <Pressable
+              style={[styles.methodOption, paymentMethod === 'wallet' && styles.methodOptionActive]}
+              onPress={() => setPaymentMethod('wallet')}
+            >
+              <Ionicons name="wallet-outline" size={18} color={paymentMethod === 'wallet' ? '#FFFFFF' : Colors.neutral[600]} />
+              <Text style={[styles.methodOptionText, paymentMethod === 'wallet' && styles.methodOptionTextActive]}>Wallet</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.methodOption, paymentMethod === 'card' && styles.methodOptionActive]}
+              onPress={() => setPaymentMethod('card')}
+            >
+              <Ionicons name="card-outline" size={18} color={paymentMethod === 'card' ? '#FFFFFF' : Colors.neutral[600]} />
+              <Text style={[styles.methodOptionText, paymentMethod === 'card' && styles.methodOptionTextActive]}>Card (Paystack)</Text>
+            </Pressable>
+          </View>
+          {paymentMethod === 'wallet' && selectedGroup && !hasEnoughBalance && (
+            <View style={styles.insufficientBanner}>
+              <Ionicons name="warning-outline" size={16} color="#f59e0b" />
+              <Text style={styles.insufficientText}>Insufficient balance. Fund your wallet first.</Text>
+            </View>
+          )}
         </View>
 
         {/* Group selection */}
@@ -125,9 +199,7 @@ function PayContent() {
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>👥</Text>
               <Text style={styles.emptyTitle}>No active groups</Text>
-              <Text style={styles.emptySubtitle}>
-                Join or create a group to start making contributions
-              </Text>
+              <Text style={styles.emptySubtitle}>Join or create a group to start making contributions</Text>
             </View>
           ) : (
             <View style={styles.groupsList}>
@@ -148,9 +220,7 @@ function PayContent() {
                         {formatCurrency(group.contributionAmount)}/{group.frequency}
                       </Text>
                       {group.nextContribution && (
-                        <Text style={styles.nextDate}>
-                          Next: {formatDate(group.nextContribution)}
-                        </Text>
+                        <Text style={styles.nextDate}>Next: {formatDate(group.nextContribution)}</Text>
                       )}
                     </View>
                     {isSelected && <Text style={styles.checkmark}>✓</Text>}
@@ -172,14 +242,20 @@ function PayContent() {
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Amount</Text>
-                <Text style={[styles.summaryValue, styles.summaryAmount]}>
-                  {formatCurrency(contributionAmount)}
-                </Text>
+                <Text style={[styles.summaryValue, styles.summaryAmount]}>{formatCurrency(contributionAmount)}</Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Payment via</Text>
-                <Text style={styles.summaryValue}>Paystack (Card / Bank)</Text>
+                <Text style={styles.summaryLabel}>Pay via</Text>
+                <Text style={styles.summaryValue}>{paymentMethod === 'wallet' ? 'Wallet Balance' : 'Card (Paystack)'}</Text>
               </View>
+              {paymentMethod === 'wallet' && (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Balance after</Text>
+                  <Text style={[styles.summaryValue, { color: hasEnoughBalance ? Colors.primary.main : '#ef4444' }]}>
+                    {formatCurrency((wallet?.availableBalance ?? 0) - contributionAmount)}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -190,18 +266,16 @@ function PayContent() {
         {isProcessing ? (
           <View style={styles.processingContainer}>
             <ActivityIndicator color={Colors.primary.main} />
-            <Text style={styles.processingText}>Recording payment...</Text>
+            <Text style={styles.processingText}>Processing payment...</Text>
           </View>
         ) : (
           <Pressable
-            style={[styles.payButton, !canPay && styles.payButtonDisabled]}
-            onPress={handleInitiatePayment}
-            disabled={!canPay}
+            style={[styles.payButton, (!canPay || (paymentMethod === 'wallet' && selectedGroup && !hasEnoughBalance)) ? styles.payButtonDisabled : undefined]}
+            onPress={handlePay}
+            disabled={!canPay || (paymentMethod === 'wallet' && !!selectedGroup && !hasEnoughBalance)}
           >
             <Text style={styles.payButtonText}>
-              {selectedGroup
-                ? `Pay ${formatCurrency(contributionAmount)}`
-                : 'Select a group to pay'}
+              {selectedGroup ? `Pay ${formatCurrency(contributionAmount)}` : 'Select a group to pay'}
             </Text>
           </Pressable>
         )}
@@ -220,6 +294,50 @@ export default function PayScreen() {
 }
 
 const styles = StyleSheet.create({
+  methodToggle: {
+    flexDirection: 'row',
+    backgroundColor: Colors.neutral[100],
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: Spacing.sm,
+  },
+  methodOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    borderRadius: 10,
+  },
+  methodOptionActive: {
+    backgroundColor: Colors.primary.main,
+  },
+  methodOptionText: {
+    fontSize: 14,
+    fontFamily: Typography.fontFamily.semibold,
+    color: Colors.neutral[600],
+  },
+  methodOptionTextActive: {
+    color: '#FFFFFF',
+  },
+  insufficientBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: '#fffbeb',
+    borderRadius: 8,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    marginTop: Spacing.xs,
+  },
+  insufficientText: {
+    fontSize: 13,
+    fontFamily: Typography.fontFamily.regular,
+    color: '#92400e',
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background.light,
