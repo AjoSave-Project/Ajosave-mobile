@@ -178,17 +178,12 @@ class ApiServiceClass {
         config = await interceptor(config);
       }
 
-      // Log request in development
-      if (__DEV__) {
-        console.log(`[API] ${method} ${url}`);
-      }
-
       // Make the request with timeout
       const response = await this.fetchWithTimeout(config);
 
-      // Log response in development (only errors)
+      // Log errors in development
       if (__DEV__ && !response.success) {
-        console.log(`[API Error] ${method} ${url}`, response);
+        console.warn(`[API Error] ${method} ${url}`, response);
       }
 
       // Apply response interceptors
@@ -201,11 +196,6 @@ class ApiServiceClass {
     } catch (error: any) {
       // Check if we should retry on network failure
       if (this.isNetworkError(error) && retryCount < this.maxRetries) {
-        // Only log first retry
-        if (__DEV__ && retryCount === 0) {
-          console.log(`[API] Retrying ${method} ${url} (${this.maxRetries} attempts)`);
-        }
-        
         // Exponential backoff: 1s, 2s, 4s
         const delay = Math.pow(2, retryCount) * 1000;
         await this.sleep(delay);
@@ -239,8 +229,8 @@ class ApiServiceClass {
         signal: controller.signal,
       };
 
-      if (config.body && config.method !== 'GET') {
-        fetchOptions.body = JSON.stringify(config.body);
+      if (config.method !== 'GET') {
+        fetchOptions.body = JSON.stringify(config.body ?? {});
       }
 
       const response = await fetch(config.url, fetchOptions);
@@ -261,7 +251,7 @@ class ApiServiceClass {
         const apiError = handleApiError(
           response.status,
           data?.message || data?.error?.message,
-          data?.error?.details || data
+          data?.errors || data?.error?.details || data
         );
         throw apiError;
       }

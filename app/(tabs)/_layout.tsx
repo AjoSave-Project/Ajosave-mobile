@@ -1,13 +1,16 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { TabHeader } from '@/components/TabHeader';
 import { Colors } from '@/constants/colors';
 import { Spacing } from '@/constants/spacing';
 import { Typography } from '@/constants/typography';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * Tab Layout
@@ -40,13 +43,23 @@ function TabBarIcon({ name, focused }: { name: any; focused: boolean }) {
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/(auth)/welcome');
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Don't render tabs until auth state is known
+  if (isLoading || !isAuthenticated) return null;
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#FFFFFF',
         tabBarInactiveTintColor: Colors.neutral[400],
-        headerShown: false,
+        headerShown: true,
         tabBarButton: HapticTab,
         tabBarStyle: {
           ...styles.tabBar,
@@ -59,6 +72,7 @@ export default function TabLayout() {
         name="home"
         options={{
           title: 'Home',
+          header: () => <TabHeader title="Home" showGreeting />,
           tabBarIcon: ({ focused }) => (
             <TabBarIcon name={focused ? "home" : "home-outline"} focused={focused} />
           ),
@@ -68,6 +82,7 @@ export default function TabLayout() {
         name="groups"
         options={{
           title: 'Groups',
+          header: () => <TabHeader title="Groups" />,
           tabBarIcon: ({ focused }) => (
             <TabBarIcon name={focused ? "people" : "people-outline"} focused={focused} />
           ),
@@ -77,6 +92,7 @@ export default function TabLayout() {
         name="pay"
         options={{
           title: 'Pay',
+          header: () => <TabHeader title="Pay" />,
           tabBarIcon: ({ focused }) => (
             <TabBarIcon name={focused ? "card" : "card-outline"} focused={focused} />
           ),
@@ -86,6 +102,7 @@ export default function TabLayout() {
         name="wallet"
         options={{
           title: 'Wallet',
+          header: () => <TabHeader title="Wallet" />,
           tabBarIcon: ({ focused }) => (
             <TabBarIcon name={focused ? "wallet" : "wallet-outline"} focused={focused} />
           ),

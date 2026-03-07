@@ -27,41 +27,25 @@ import { ApiService } from '@/services/apiService';
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
+// Set base URL immediately (synchronous) so it's ready before any provider mounts
+const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+ApiService.setBaseUrl(apiUrl);
+
 export default function RootLayout() {
-  console.log('[RootLayout] Rendering...');
-  
-  // Load custom fonts
   const [fontsLoaded] = useFonts({
     'Gilroy-Regular': require('@/assets/fonts/Gilroy-Regular.ttf'),
     'Gilroy-Medium': require('@/assets/fonts/Gilroy-Medium.ttf'),
     'Gilroy-SemiBold': require('@/assets/fonts/Gilroy-SemiBold.ttf'),
     'Gilroy-Bold': require('@/assets/fonts/Gilroy-Bold.ttf'),
   });
-  
-  // Initialize API service on mount
-  useEffect(() => {
-    const initializeApp = async () => {
-      // Set API base URL from environment variable
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
-      ApiService.setBaseUrl(apiUrl);
-      
-      // Initialize API service (loads stored auth token)
-      await ApiService.initialize();
-      
-      console.log('[RootLayout] API service initialized with base URL:', apiUrl);
-    };
 
-    initializeApp();
-  }, []);
-  
   // Hide splash screen when fonts are loaded
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
-  
-  // Show nothing while fonts are loading
+
   if (!fontsLoaded) {
     return null;
   }

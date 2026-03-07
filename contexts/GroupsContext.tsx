@@ -3,29 +3,22 @@
  * 
  * Provides groups state and actions to the entire app:
  * - Groups state (groups, selectedGroup, isLoading, error)
- * - Groups actions (fetchGroups, fetchGroupDetails, createGroup, joinGroup, leaveGroup, searchGroups, refreshGroups)
+ * - Groups actions (fetchGroups, fetchGroupDetails, createGroup, joinGroup, findGroupByCode, refreshGroups)
  * - Caching in AsyncStorage
  * - Optimistic updates for create/join operations
- * 
- * Validates: Requirements 5.3, 6.3, 6.5, 7.2
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ApiService } from '../services/apiService';
+import { GroupService, Group, CreateGroupRequest } from '../services/groupService';
 import { StorageService, STORAGE_KEYS } from '../services/storageService';
-import { Group } from '../types/models';
 
 /**
- * Create group request interface
+ * Create group response type
  */
-export interface CreateGroupRequest {
-  name: string;
-  description: string;
-  contributionAmount: number;
-  contributionFrequency: 'daily' | 'weekly' | 'monthly';
-  maxMembers: number;
-  startDate: string;
-}
+export type CreateGroupResponse = {
+  group: Group;
+  invitationCode: string;
+};
 
 /**
  * Groups context value interface
@@ -40,10 +33,9 @@ export interface GroupsContextValue {
   // Actions
   fetchGroups: () => Promise<void>;
   fetchGroupDetails: (groupId: string) => Promise<void>;
-  createGroup: (data: CreateGroupRequest) => Promise<Group>;
+  createGroup: (data: CreateGroupRequest) => Promise<CreateGroupResponse>;
   joinGroup: (groupId: string) => Promise<void>;
-  leaveGroup: (groupId: string) => Promise<void>;
-  searchGroups: (query: string) => Promise<Group[]>;
+  findGroupByCode: (code: string) => Promise<Group>;
   refreshGroups: () => Promise<void>;
 }
 
@@ -77,18 +69,13 @@ export function GroupsProvider({ children }: GroupsProviderProps) {
   useEffect(() => {
     const loadCachedData = async () => {
       try {
-        // Load cached groups data
+        // Load cached groups data for immediate display
         const cachedGroups = await StorageService.get<Group[]>(STORAGE_KEYS.GROUPS_DATA);
         if (cachedGroups) {
           setGroups(cachedGroups);
         }
-
-        // Fetch fresh data in the background - suppress errors if API unavailable
-        try {
-          await fetchGroups();
-        } catch (err) {
-          // Silently suppress API errors when backend isn't running
-        }
+        // NOTE: Live fetch is triggered by each screen on mount, not here,
+        // to avoid unauthenticated requests during app startup.
       } catch (err) {
         // Silently suppress error
       }
@@ -107,17 +94,9 @@ export function GroupsProvider({ children }: GroupsProviderProps) {
       setIsLoading(true);
       setError(null);
 
-      // Call API to get groups data
-      const response = await ApiService.get<Group[]>('/groups');
-
-      if (response.success && response.data) {
-        setGroups(response.data);
-        
-        // Cache groups data
-        await StorageService.set(STORAGE_KEYS.GROUPS_DATA, response.data);
-      } else {
-        throw new Error('Failed to fetch groups data');
-      }
+      // Call GroupService to get groups data
+      const response = await GroupService.getUserGroups();
+      setGroups(response.groups);
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to load groups';
       setError(errorMessage);
@@ -138,22 +117,17 @@ export function GroupsProvider({ children }: GroupsProviderProps) {
       setIsLoading(true);
       setError(null);
 
-      // Call API to get group details
-      const response = await ApiService.get<Group>(`/groups/${groupId}`);
-
-      if (response.success && response.data) {
-        setSelectedGroup(response.data);
-        
-        // Cache group details
-        await StorageService.set(`@group_${groupId}`, response.data);
-        
-        // Update the group in the groups list if it exists
-        setGroups(prevGroups => 
-          prevGroups.map(g => g.id === groupId ? response.data : g)
-        );
-      } else {
-        throw new Error('Failed to fetch group details');
-      }
+      // Call GroupService to get group details
+      const response = await GroupService.getGroupById(groupId);
+      setSelectedGroup(response.group);
+      
+      // Cache group details
+      await StorageService.set(`@group_${groupId}`, response.group);
+      
+      // Update the group in the groups list if it exists
+      setGroups(prevGroups => 
+        prevGroups.map(g => g._id === groupId ? response.group : g)
+      );
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to load group details';
       setError(errorMessage);
@@ -168,53 +142,21 @@ export function GroupsProvider({ children }: GroupsProviderProps) {
    * Implements optimistic update - adds group to list immediately
    * 
    * @param data - Group creation data
-   * @returns Created group
+   * @returns Created group with invitation code
    */
-  const createGroup = async (data: CreateGroupRequest): Promise<Group> => {
-    // Generate temporary ID for optimistic update
-    const tempId = `temp_${Date.now()}`;
-    const optimisticGroup: Group = {
-      id: tempId,
-      name: data.name,
-      description: data.description,
-      contributionAmount: data.contributionAmount,
-      contributionFrequency: data.contributionFrequency,
-      maxMembers: data.maxMembers,
-      currentMembers: 1,
-      startDate: data.startDate,
-      status: 'active',
-      createdBy: '', // Will be filled by backend
-      createdAt: new Date().toISOString(),
-    };
-
+  const createGroup = async (data: CreateGroupRequest): Promise<CreateGroupResponse> => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Optimistic update - add group to list immediately
-      setGroups(prevGroups => [optimisticGroup, ...prevGroups]);
-
-      // Call API to create group
-      const response = await ApiService.post<Group>('/groups/create', data);
-
-      if (response.success && response.data) {
-        // Replace optimistic group with real group from API
-        setGroups(prevGroups => 
-          prevGroups.map(g => g.id === tempId ? response.data : g)
-        );
-        
-        // Update cache
-        const updatedGroups = groups.map(g => g.id === tempId ? response.data : g);
-        await StorageService.set(STORAGE_KEYS.GROUPS_DATA, updatedGroups);
-        
-        return response.data;
-      } else {
-        throw new Error('Failed to create group');
-      }
-    } catch (err: any) {
-      // Revert optimistic update on error
-      setGroups(prevGroups => prevGroups.filter(g => g.id !== tempId));
+      // Call GroupService to create group
+      const response = await GroupService.createGroup(data);
       
+      // Add new group to list
+      setGroups(prevGroups => [response.group, ...prevGroups]);
+      
+      return response;
+    } catch (err: any) {
       const errorMessage = err.message || 'Failed to create group';
       setError(errorMessage);
       throw err;
@@ -225,7 +167,6 @@ export function GroupsProvider({ children }: GroupsProviderProps) {
 
   /**
    * Join an existing group
-   * Implements optimistic update - adds group to list immediately
    * 
    * @param groupId - ID of the group to join
    */
@@ -234,35 +175,12 @@ export function GroupsProvider({ children }: GroupsProviderProps) {
       setIsLoading(true);
       setError(null);
 
-      // Fetch group details for optimistic update
-      let groupToJoin: Group | null = null;
-      try {
-        const groupResponse = await ApiService.get<Group>(`/groups/${groupId}`);
-        if (groupResponse.success && groupResponse.data) {
-          groupToJoin = groupResponse.data;
-        }
-      } catch (err) {
-        // Silently suppress error
-      }
-
-      // Optimistic update - add group to list if we have the data
-      if (groupToJoin && !groups.find(g => g.id === groupId)) {
-        setGroups(prevGroups => [groupToJoin!, ...prevGroups]);
-      }
-
-      // Call API to join group
-      const response = await ApiService.post<void>(`/groups/${groupId}/join`);
-
-      if (response.success) {
-        // Refresh groups to get updated data
-        await fetchGroups();
-      } else {
-        throw new Error('Failed to join group');
-      }
-    } catch (err: any) {
-      // Revert optimistic update on error
-      setGroups(prevGroups => prevGroups.filter(g => g.id !== groupId));
+      // Call GroupService to join group
+      await GroupService.joinGroup(groupId);
       
+      // Refresh groups to get updated data
+      await fetchGroups();
+    } catch (err: any) {
       const errorMessage = err.message || 'Failed to join group';
       setError(errorMessage);
       throw err;
@@ -272,67 +190,21 @@ export function GroupsProvider({ children }: GroupsProviderProps) {
   };
 
   /**
-   * Leave a group
-   * Removes group from list
+   * Find group by invitation code
    * 
-   * @param groupId - ID of the group to leave
+   * @param code - Invitation code
+   * @returns Group details
    */
-  const leaveGroup = async (groupId: string): Promise<void> => {
+  const findGroupByCode = async (code: string): Promise<Group> => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Call API to leave group
-      const response = await ApiService.post<void>(`/groups/${groupId}/leave`);
-
-      if (response.success) {
-        // Remove group from list
-        setGroups(prevGroups => prevGroups.filter(g => g.id !== groupId));
-        
-        // Clear selected group if it's the one being left
-        if (selectedGroup?.id === groupId) {
-          setSelectedGroup(null);
-        }
-        
-        // Update cache
-        const updatedGroups = groups.filter(g => g.id !== groupId);
-        await StorageService.set(STORAGE_KEYS.GROUPS_DATA, updatedGroups);
-        
-        // Remove cached group details
-        await StorageService.remove(`@group_${groupId}`);
-      } else {
-        throw new Error('Failed to leave group');
-      }
+      // Call GroupService to find group by code
+      const response = await GroupService.findGroupByCode(code);
+      return response.group;
     } catch (err: any) {
-      const errorMessage = err.message || 'Failed to leave group';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * Search for groups by query
-   * 
-   * @param query - Search query (group code or name)
-   * @returns Array of matching groups
-   */
-  const searchGroups = async (query: string): Promise<Group[]> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Call API to search groups
-      const response = await ApiService.get<Group[]>('/groups/search', { query });
-
-      if (response.success && response.data) {
-        return response.data;
-      } else {
-        throw new Error('Failed to search groups');
-      }
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to search groups';
+      const errorMessage = err.message || 'Group not found';
       setError(errorMessage);
       throw err;
     } finally {
@@ -367,8 +239,7 @@ export function GroupsProvider({ children }: GroupsProviderProps) {
     fetchGroupDetails,
     createGroup,
     joinGroup,
-    leaveGroup,
-    searchGroups,
+    findGroupByCode,
     refreshGroups,
   };
 

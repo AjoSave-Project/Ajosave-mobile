@@ -1,319 +1,212 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView, Linking } from 'react-native';
-import { router } from 'expo-router';
+import {
+  View, Text, StyleSheet, TextInput, Pressable,
+  ScrollView, ActivityIndicator
+} from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+import { useAuth } from '@/contexts/AuthContext';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
+import { extractFieldErrors, getErrorMessage } from '@/utils/errors';
+import DateOfBirthInput from '@/components/DateOfBirthInput';
 
-/**
- * KYC (Know Your Customer) Screen
- * 
- * Allows users to complete their identity verification with BVN, date of birth, address, and state
- */
 export default function KYCScreen() {
+  const { signup, isLoading } = useAuth();
+  const keyboardVisible = useKeyboardVisible();
+
+  // Basic info passed from create-account screen
+  const params = useLocalSearchParams<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    password: string;
+  }>();
+
   const [bvn, setBvn] = useState('');
   const [nin, setNin] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [address, setAddress] = useState('');
-  const [state, setState] = useState('');
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState('');
 
-  const handleContinue = () => {
-    // TODO: Implement KYC verification logic
-    router.push('/setup-biometric');
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (bvn.length !== 11) e.bvn = 'BVN must be 11 digits';
+    if (nin.length !== 11) e.nin = 'NIN must be 11 digits';
+    if (!dateOfBirth.trim()) e.dateOfBirth = 'Date of birth is required';
+    return e;
   };
 
-  const handleOpenTerms = async () => {
-    const termsUrl = 'https://example.com/terms-and-conditions'; // TODO: Replace with actual terms URL
+  const handleSubmit = async () => {
+    const newErrors = validate();
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
+    setSubmitError('');
+
     try {
-      const supported = await Linking.canOpenURL(termsUrl);
-      if (supported) {
-        await Linking.openURL(termsUrl);
+      const result = await signup({
+        firstName: params.firstName,
+        lastName: params.lastName,
+        email: params.email,
+        phoneNumber: params.phoneNumber,
+        password: params.password,
+        bvn,
+        nin,
+        dateOfBirth,
+      });
+      if (result && (result as any).requiresOtp) {
+        router.replace({
+          pathname: '/(auth)/verify-otp',
+          params: { userId: (result as any).userId, phoneNumber: (result as any).phoneNumber, purpose: 'signup', devOtp: (result as any).devOtp ?? '' },
+        });
       } else {
-        console.error('Cannot open URL:', termsUrl);
+        router.replace('/(auth)/setup-biometric');
       }
-    } catch (error) {
-      console.error('Error opening terms:', error);
+    } catch (error: any) {
+      const fieldErrors = extractFieldErrors(error);
+      if (Object.keys(fieldErrors).length > 0) {
+        setErrors(prev => ({ ...prev, ...fieldErrors }));
+      }
+      setSubmitError(getErrorMessage(error));
     }
   };
 
   return (
-    <KeyboardAvoidingView 
+    <ScrollView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      bounces={false}
+      automaticallyAdjustKeyboardInsets
     >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        {/* Back Button */}
-        <Pressable style={styles.backButton} onPress={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace('/(auth)/welcome');
-          }
-        }}>
+        <View style={styles.topSection}>
+        <Pressable style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/welcome')}>
           <Text style={styles.backArrow}>←</Text>
         </Pressable>
 
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Verify Your Identity</Text>
           <Text style={styles.subtitle}>Complete your KYC verification</Text>
         </View>
+        </View>
 
-        {/* Card Wrapper with Overlapping Avatar */}
-        <View style={styles.cardWrapper}>
-          {/* Avatar - Positioned absolutely to overlap card */}
+        <View style={[styles.cardWrapper, { paddingBottom: keyboardVisible ? 300 : 80 }]}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <Ionicons name="person" color={"#ffffff"} style={styles.avatarIcon}></Ionicons>
+              <Ionicons name="location" color="#ffffff" style={styles.avatarIcon} />
             </View>
           </View>
 
-          {/* Grey Card */}
           <View style={styles.card}>
-            {/* Form Container with space-between layout */}
             <View style={styles.formContainer}>
-              {/* Input Fields Section */}
               <View style={styles.inputSection}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>BVN (Bank Verification Number)</Text>
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoText}>
+                    Please provide your identity details to complete registration.
+                  </Text>
+                </View>
+
+                <Field label="BVN (11 digits)" error={errors.bvn}>
                   <TextInput
-                    style={styles.input}
-                    placeholder="Enter your 11-digit BVN"
+                    style={[styles.input, errors.bvn && styles.inputError]}
+                    placeholder="Enter your BVN"
                     placeholderTextColor={Colors.neutral[500]}
                     value={bvn}
-                    onChangeText={setBvn}
+                    onChangeText={v => { setBvn(v.replace(/\D/g, '')); if (errors.bvn) setErrors(p => { const e = { ...p }; delete e.bvn; return e; }); }}
                     keyboardType="number-pad"
                     maxLength={11}
+                    editable={!isLoading}
                   />
-                </View>
+                </Field>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>NIN (National Identification Number)</Text>
+                <Field label="NIN (11 digits)" error={errors.nin}>
                   <TextInput
-                    style={styles.input}
-                    placeholder="Enter your 11-digit NIN"
+                    style={[styles.input, errors.nin && styles.inputError]}
+                    placeholder="Enter your NIN"
                     placeholderTextColor={Colors.neutral[500]}
                     value={nin}
-                    onChangeText={setNin}
+                    onChangeText={v => { setNin(v.replace(/\D/g, '')); if (errors.nin) setErrors(p => { const e = { ...p }; delete e.nin; return e; }); }}
                     keyboardType="number-pad"
                     maxLength={11}
+                    editable={!isLoading}
                   />
-                </View>
+                </Field>
 
-                <View style={styles.checkboxContainer}>
-                  <Pressable 
-                    onPress={() => setAgreedToTerms(!agreedToTerms)}
-                    hitSlop={8}
-                  >
-                    <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
-                      {agreedToTerms && <Text style={styles.checkmark}>✓</Text>}
-                    </View>
-                  </Pressable>
-                  <View style={styles.checkboxLabelContainer}>
-                    <Text style={styles.checkboxLabel}>I agree to the </Text>
-                    <Pressable onPress={handleOpenTerms} hitSlop={8}>
-                      <Text style={styles.link}>Terms and Conditions</Text>
-                    </Pressable>
-                  </View>
-                </View>
+                <DateOfBirthInput
+                  value={dateOfBirth}
+                  onChangeText={v => { setDateOfBirth(v); if (errors.dateOfBirth) setErrors(p => { const e = { ...p }; delete e.dateOfBirth; return e; }); }}
+                  error={errors.dateOfBirth}
+                  editable={!isLoading}
+                />
               </View>
 
-              {/* Button Section at Bottom */}
               <View style={styles.buttonSection}>
-                <Pressable 
-                  style={[styles.button, !agreedToTerms && styles.buttonDisabled]} 
-                  onPress={handleContinue}
-                  disabled={!agreedToTerms}
-                >
-                  <Text style={styles.buttonText}>Continue</Text>
-                  <Text style={styles.arrow}>→</Text>
+                {submitError ? (
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorBannerText}>{submitError}</Text>
+                  </View>
+                ) : null}
+                <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleSubmit} disabled={isLoading}>
+                  {isLoading ? <ActivityIndicator color="#FFFFFF" /> : (
+                    <>
+                      <Text style={styles.buttonText}>Complete Registration</Text>
+                      <Text style={styles.arrow}>→</Text>
+                    </>
+                  )}
                 </Pressable>
               </View>
             </View>
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
   );
 }
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return (
+    <View style={{ gap: 4 }}>
+      <Text style={fieldStyles.label}>{label}</Text>
+      {children}
+      {error && <Text style={fieldStyles.error}>{error}</Text>}
+    </View>
+  );
+}
+
+const fieldStyles = StyleSheet.create({
+  label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[400], marginLeft: Spacing.md },
+  error: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: '#ef4444', marginLeft: Spacing.xs },
+});
 
 const AVATAR_SIZE = 90;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingTop: Spacing.xl,
-  },
-  backButton: {
-    margin: Spacing.xl,
-  },
-  backArrow: {
-    fontSize: 24,
-    fontFamily: Typography.fontFamily.regular,
-    color: Colors.primary.main,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: Spacing['3xl'],
-  },
-  title: {
-    fontSize: 32,
-    fontFamily: Typography.fontFamily.bold,
-    color: Colors.primary.main,
-  },
-  subtitle: {
-    fontSize: 13,
-    fontFamily: Typography.fontFamily.bold,
-    color: Colors.primary.light,
-  },
-  cardWrapper: {
-    position: 'relative',
-    flex: 1,
-  },
-  avatarContainer: {
-    position: 'absolute',
-    top: -AVATAR_SIZE / 2,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: Colors.primary.main,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
-  },
-  avatarIcon: {
-    fontSize: 48,
-    fontFamily: Typography.fontFamily.regular,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: "#b3ceefaf",
-    borderTopLeftRadius: 50,
-    borderTopRightRadius: 50,
-    paddingTop: AVATAR_SIZE / 2 + Spacing.xl,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
-  formContainer: {
-    flex: 1,
-  },
-  inputSection: {
-    gap: Spacing.lg,
-  },
-  buttonSection: {
-    marginTop: 'auto',
-  },
-  inputGroup: {
-    gap: Spacing.xs,
-  },
-  label: {
-    fontSize: 14,
-    fontFamily: Typography.fontFamily.regular,
-    color: Colors.neutral[400],
-    marginLeft: Spacing.md,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 8,
-    fontSize: 16,
-    fontFamily: Typography.fontFamily.medium,
-    color: Colors.text.primary.light,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginLeft: Spacing.md,
-    flexWrap: 'wrap',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: Colors.neutral[300],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: Colors.primary.main,
-    borderColor: Colors.primary.main,
-    alignSelf: "center",
-  },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: Typography.fontFamily.bold,
-  },
-  checkboxLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  checkboxLabel: {
-    fontSize: 14,
-    fontFamily: Typography.fontFamily.regular,
-    color: Colors.neutral[600],
-  },
-  link: {
-    fontSize: 14,
-    color: Colors.primary.main,
-    fontFamily: Typography.fontFamily.medium,
-    textDecorationLine: "underline",
-    textDecorationStyle: "solid",
-    textDecorationColor: Colors.primary.main,
-  },
-  button: {
-    backgroundColor: Colors.primary.main,
-    paddingVertical: 20,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: Typography.fontFamily.semibold,
-  },
-  arrow: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontFamily: Typography.fontFamily.regular,
-  },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollContent: { flexGrow: 1, paddingTop: Spacing.xl },
+  backButton: { margin: Spacing.xl },
+  backArrow: { fontSize: 24, fontFamily: Typography.fontFamily.regular, color: Colors.primary.main },
+  header: { alignItems: 'center', marginBottom: Spacing['3xl'] },
+  title: { fontSize: 32, fontFamily: Typography.fontFamily.bold, color: Colors.primary.main },
+  subtitle: { fontSize: 13, fontFamily: Typography.fontFamily.bold, color: Colors.primary.light },
+  topSection: { backgroundColor: '#FFFFFF', paddingBottom: Spacing['3xl'] },
+  cardWrapper: { position: 'relative', backgroundColor: '#b3ceef', paddingBottom: 80, borderTopLeftRadius: 50, borderTopRightRadius: 50 },
+  avatarContainer: { position: 'absolute', top: -AVATAR_SIZE / 2, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
+  avatar: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, backgroundColor: Colors.primary.main, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4.65, elevation: 8 },
+  avatarIcon: { fontSize: 48, fontFamily: Typography.fontFamily.regular },
+  card: { backgroundColor: '#b3ceef', borderTopLeftRadius: 50, borderTopRightRadius: 50, paddingTop: AVATAR_SIZE / 2 + Spacing.xl, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg },
+  formContainer: {},
+  inputSection: { gap: Spacing.lg },
+  infoBox: { backgroundColor: 'rgba(255,255,255,0.7)', padding: Spacing.md, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: Colors.primary.main },
+  infoText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[700], lineHeight: 20 },
+  buttonSection: { paddingTop: Spacing.lg },
+  input: { backgroundColor: '#FFFFFF', paddingVertical: Spacing.md, paddingHorizontal: Spacing.md, borderRadius: 8, fontSize: 16, fontFamily: Typography.fontFamily.medium, color: Colors.text.primary.light, borderWidth: 1, borderColor: Colors.neutral[200] },
+  inputError: { borderColor: '#ef4444' },
+  button: { backgroundColor: Colors.primary.main, paddingVertical: 20, paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600', fontFamily: Typography.fontFamily.semibold },
+  arrow: { color: '#FFFFFF', fontSize: 24, fontFamily: Typography.fontFamily.regular },
+  errorBanner: { backgroundColor: '#fee2e2', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.md, borderLeftWidth: 4, borderLeftColor: '#ef4444' },
+  errorBannerText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: '#b91c1c' },
 });

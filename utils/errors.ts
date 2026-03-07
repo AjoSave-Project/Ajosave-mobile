@@ -274,3 +274,32 @@ export function createRuntimeError(message: string, details?: any): ApiError {
     'runtime'
   );
 }
+
+/**
+ * Extract field-level validation errors from an ApiError's details array.
+ * Returns a map of { fieldName: errorMessage } for use in form state.
+ */
+export function extractFieldErrors(error: any): Record<string, string> {
+  const details = error?.details;
+  if (!Array.isArray(details)) return {};
+  return details.reduce((acc: Record<string, string>, item: any) => {
+    if (item?.field && item?.message) {
+      acc[item.field] = item.message;
+    }
+    return acc;
+  }, {});
+}
+
+/**
+ * Get a single user-friendly error message from any error.
+ * Prefers the first field-level message for validation errors,
+ * otherwise falls back to the top-level message.
+ */
+export function getErrorMessage(error: any): string {
+  if (!error) return 'An unexpected error occurred.';
+  const details = error?.details;
+  if (Array.isArray(details) && details.length > 0 && details[0]?.message) {
+    return details[0].message;
+  }
+  return error.message || 'An unexpected error occurred.';
+}

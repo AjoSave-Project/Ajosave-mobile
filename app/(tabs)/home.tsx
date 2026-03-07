@@ -1,169 +1,256 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
-import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { useAuth, useWallet, useGroups } from '@/contexts';
+import { useWallet } from '@/contexts/WalletContext';
+import { useGroups } from '@/contexts/GroupsContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatCurrency, formatDate } from '@/utils/formatting';
 
-// Mock transaction data
-const mockTransactions = [
-  { id: '1', name: 'John Doe', type: 'Group Contribution', amount: 5000, isCredit: false, time: '10:30 AM', avatar: 'JD' },
-  { id: '2', name: 'Sarah Smith', type: 'Payout Received', amount: 15000, isCredit: true, time: '09:15 AM', avatar: 'SS' },
-  { id: '3', name: 'Mike Johnson', type: 'Group Contribution', amount: 3000, isCredit: false, time: '08:45 AM', avatar: 'MJ' },
-];
-
-/**
- * Home/Dashboard Screen
- * 
- * Main overview screen showing:
- * - Header with back button, welcome message, and notifications
- * - Balance card with visibility toggle
- * - Action grid (6 buttons)
- * - Transactions list
- */
 export default function HomeScreen() {
-  const { user } = useAuth();
-  const { wallet, refreshWallet } = useWallet();
-  const { refreshGroups } = useGroups();
+  const { wallet, transactions, isLoading, error, fetchWallet, fetchTransactions, refreshWallet } = useWallet();
+  const { groups, fetchGroups, refreshGroups } = useGroups();
   const [refreshing, setRefreshing] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
+
+  useEffect(() => {
+    fetchWallet();
+    fetchTransactions({ limit: 5 });
+    fetchGroups();
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
       await Promise.all([refreshWallet(), refreshGroups()]);
-    } catch (error) {
-      console.error('Refresh error:', error);
+    } catch (err) {
+      console.error('Refresh error:', err);
     } finally {
       setRefreshing(false);
     }
   };
 
-  const userName = user?.email?.split('@')[0] || 'User';
-  const displayName = userName.length > 15 ? userName.substring(0, 15) + '...' : userName;
+  const recentTransactions = Array.isArray(transactions) ? transactions.slice(0, 5) : [];
+  const groupsArray = Array.isArray(groups) ? groups : [];
+  const activeGroups = groupsArray.filter(g => g.status === 'active');
+  const pendingGroups = groupsArray.filter(g => g.status === 'pending');
+
+  const nextPayout = activeGroups
+    .filter(g => g.nextPayout)
+    .sort((a, b) => new Date(a.nextPayout!).getTime() - new Date(b.nextPayout!).getTime())[0];
+
+  const getTransactionColor = (type: string) => {
+    switch (type) {
+      case 'payout': return Colors.success?.main || '#22c55e';
+      case 'contribution': return Colors.error?.main || '#ef4444';
+      default: return Colors.neutral[600];
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return '#22c55e';
+      case 'pending': return '#f59e0b';
+      case 'completed': return Colors.primary.main;
+      default: return Colors.neutral[500];
+    }
+  };
+
+  const quickActions = [
+    { icon: 'people-outline', label: 'Create Group', onPress: () => router.push('/create-group') },
+    { icon: 'enter-outline', label: 'Join Group', onPress: () => router.push('/join-group') },
+    { icon: 'card-outline', label: 'Make Payment', onPress: () => router.push('/(tabs)/pay') },
+    { icon: 'wallet-outline', label: 'Wallet', onPress: () => router.push('/(tabs)/wallet') },
+    { icon: 'business-outline', label: 'Add Bank', onPress: () => router.push('/add-bank-account') },
+    { icon: 'grid-outline', label: 'My Groups', onPress: () => router.push('/(tabs)/groups') },
+    { icon: 'list-outline', label: 'Transactions', onPress: () => router.push('/(tabs)/wallet') },
+    { icon: 'trending-up-outline', label: 'Analytics', onPress: () => {} },
+  ];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView 
+    <SafeAreaView style={styles.safeArea} edges={[]}>
+      <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color={Colors.text.primary.light} />
-          </Pressable>
-          <Text style={styles.welcomeText}>Welcome, {displayName}</Text>
-          <Pressable style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color={Colors.text.primary.light} />
-          </Pressable>
-        </View>
-
         {/* Balance Card */}
         <View style={styles.balanceCard}>
-          <Pressable 
-            style={styles.eyeButton}
-            onPress={() => setBalanceVisible(!balanceVisible)}
-          >
-            <Ionicons 
-              name={balanceVisible ? "eye-outline" : "eye-off-outline"} 
-              size={24} 
-              color="#FFFFFF" 
-            />
-          </Pressable>
-          <Text style={styles.balanceLabel}>Account Balance</Text>
-          <Text style={styles.balanceAmount}>
-            {balanceVisible 
-              ? `₦${wallet?.balance?.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`
-              : '****'
-            }
-          </Text>
-          <Text style={styles.nextPayout}>Next Payout: 25th December 2025</Text>
+          <View style={styles.balanceCardTop}>
+            <View style={styles.balanceCardLeft}>
+              <Text style={styles.balanceLabel}>Total Balance</Text>
+              <View style={styles.balanceRow}>
+                {isLoading && !wallet ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.balanceAmount}>
+                    {balanceVisible ? formatCurrency(wallet?.totalBalance ?? 0) : '₦ *****'}
+                  </Text>
+                )}
+                <Pressable onPress={() => setBalanceVisible(!balanceVisible)} style={styles.eyeButton}>
+                  <Ionicons name={balanceVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+              </View>
+            </View>
+            <View style={styles.balanceCardRight}>
+              <Text style={styles.activeGroupsLabel}>Active Groups</Text>
+              <Text style={styles.activeGroupsCount}>{activeGroups.length}</Text>
+              {pendingGroups.length > 0 && (
+                <Text style={styles.pendingGroupsText}>{pendingGroups.length} pending</Text>
+              )}
+            </View>
+          </View>
+
+          {/* 4-stat grid */}
+          <View style={styles.balanceStats}>
+            {[
+              { label: 'Available', value: wallet?.availableBalance ?? 0 },
+              { label: 'Locked', value: wallet?.lockedBalance ?? 0 },
+              { label: 'Contributed', value: wallet?.totalContributions ?? 0 },
+              { label: 'Received', value: wallet?.totalPayouts ?? 0 },
+            ].map((stat, i) => (
+              <View key={stat.label} style={[styles.balanceStat, i % 2 === 0 && styles.balanceStatLeft]}>
+                <Text style={styles.balanceStatLabel}>{stat.label}</Text>
+                <Text style={styles.balanceStatValue}>
+                  {balanceVisible ? formatCurrency(stat.value) : '*****'}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Next payout row */}
+          {nextPayout && (
+            <View style={styles.nextPayoutRow}>
+              <View>
+                <Text style={styles.nextPayoutLabel}>Next Payout</Text>
+                <Text style={styles.nextPayoutDate}>{formatDate(nextPayout.nextPayout!)}</Text>
+                <Text style={styles.nextPayoutGroup}>{nextPayout.name}</Text>
+              </View>
+              <View style={styles.nextPayoutRight}>
+                <Text style={styles.nextPayoutLabel}>Amount</Text>
+                <Text style={styles.nextPayoutAmount}>
+                  {formatCurrency(nextPayout.contributionAmount * nextPayout.maxMembers)}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* Action Grid */}
-        <View style={styles.actionGrid}>
-          <Pressable style={styles.actionButton} onPress={() => router.push('/(tabs)/groups')}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="people-outline" size={24} color={Colors.primary.main} />
-            </View>
-            <Text style={styles.actionButtonText}>Create Group</Text>
-          </Pressable>
-          
-          <Pressable style={styles.actionButton} onPress={() => router.push('/(tabs)/groups')}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="add-circle-outline" size={24} color={Colors.primary.main} />
-            </View>
-            <Text style={styles.actionButtonText}>Join Group</Text>
-          </Pressable>
-          
-          <Pressable style={styles.actionButton} onPress={() => router.push('/(tabs)/pay')}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="card-outline" size={24} color={Colors.primary.main} />
-            </View>
-            <Text style={styles.actionButtonText}>Make Payment</Text>
-          </Pressable>
-          
-          <Pressable style={styles.actionButton} onPress={() => router.push('/(tabs)/wallet')}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="list-outline" size={24} color={Colors.primary.main} />
-            </View>
-            <Text style={styles.actionButtonText}>View Transaction</Text>
-          </Pressable>
-          
-          <Pressable style={styles.actionButton} onPress={() => router.push('/(tabs)/groups')}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="add-circle-outline" size={24} color={Colors.primary.main} />
-            </View>
-            <Text style={styles.actionButtonText}>Join Group</Text>
-          </Pressable>
-          
-          <Pressable style={styles.actionButton} onPress={() => router.push('/(tabs)/groups')}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="add-circle-outline" size={24} color={Colors.primary.main} />
-            </View>
-            <Text style={styles.actionButtonText}>Join Group</Text>
-          </Pressable>
+        {/* Error Banner */}
+        {error && !isLoading && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable onPress={() => { fetchWallet(); fetchTransactions({ limit: 5 }); }} style={styles.retryButton}>
+              <Text style={styles.retryText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.actionGrid}>
+            {quickActions.map((action) => (
+              <Pressable key={action.label} style={styles.actionButton} onPress={action.onPress}>
+                <View style={styles.actionIconContainer}>
+                  <Ionicons name={action.icon as any} size={22} color={Colors.primary.main} />
+                </View>
+                <Text style={styles.actionButtonText}>{action.label}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
-        {/* Transactions Section */}
-        <View style={styles.transactionsSection}>
-          <View style={styles.transactionsHeader}>
-            <Text style={styles.transactionsTitle}>Transactions</Text>
+        {/* My Groups */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Groups</Text>
+            <Pressable onPress={() => router.push('/(tabs)/groups')}>
+              <Text style={styles.viewAllText}>View all</Text>
+            </Pressable>
+          </View>
+
+          {groupsArray.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="people-outline" size={36} color={Colors.neutral[400]} />
+              <Text style={styles.emptyText}>No groups yet</Text>
+              <View style={styles.emptyActions}>
+                <Pressable style={styles.emptyBtn} onPress={() => router.push('/create-group')}>
+                  <Text style={styles.emptyBtnText}>Create</Text>
+                </Pressable>
+                <Pressable style={[styles.emptyBtn, styles.emptyBtnOutline]} onPress={() => router.push('/join-group')}>
+                  <Text style={[styles.emptyBtnText, styles.emptyBtnOutlineText]}>Join</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {groupsArray.slice(0, 3).map((group) => (
+                <Pressable
+                  key={group._id}
+                  style={styles.groupCard}
+                  onPress={() => router.push(`/group-details?id=${group._id}`)}
+                >
+                  <View style={styles.groupIconWrap}>
+                    <Ionicons name="people" size={22} color={Colors.primary.main} />
+                  </View>
+                  <View style={styles.groupInfo}>
+                    <Text style={styles.groupName}>{group.name}</Text>
+                    <Text style={styles.groupMeta}>
+                      {group.members?.length ?? 0}/{group.maxMembers} members · {formatCurrency(group.contributionAmount)}/{group.frequency}
+                    </Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(group.status) + '20' }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(group.status) }]}>
+                      {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Recent Transactions */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
             <Pressable onPress={() => router.push('/(tabs)/wallet')}>
               <Text style={styles.viewAllText}>View all</Text>
             </Pressable>
           </View>
-          
-          <Text style={styles.todayLabel}>Today</Text>
-          
-          <View style={styles.transactionsList}>
-            {mockTransactions.map((transaction) => (
-              <View key={transaction.id} style={styles.transactionItem}>
-                <View style={styles.transactionAvatar}>
-                  <Text style={styles.transactionAvatarText}>{transaction.avatar}</Text>
-                </View>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionName}>{transaction.name}</Text>
-                  <Text style={styles.transactionType}>{transaction.type}</Text>
-                </View>
-                <View style={styles.transactionAmountContainer}>
-                  <Text style={[
-                    styles.transactionAmount,
-                    transaction.isCredit ? styles.creditAmount : styles.debitAmount
-                  ]}>
-                    {transaction.isCredit ? '+' : '-'}₦{transaction.amount.toLocaleString()}
+
+          {isLoading && recentTransactions.length === 0 ? (
+            <ActivityIndicator color={Colors.primary.main} style={{ paddingVertical: Spacing.xl }} />
+          ) : recentTransactions.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="receipt-outline" size={36} color={Colors.neutral[400]} />
+              <Text style={styles.emptyText}>No transactions yet</Text>
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {recentTransactions.map((tx) => (
+                <View key={tx._id} style={styles.txItem}>
+                  <View style={[styles.txIcon, { backgroundColor: getTransactionColor(tx.type) + '20' }]}>
+                    <Ionicons
+                      name={tx.type === 'payout' ? 'arrow-down' : 'arrow-up'}
+                      size={18}
+                      color={getTransactionColor(tx.type)}
+                    />
+                  </View>
+                  <View style={styles.txInfo}>
+                    <Text style={styles.txType}>{tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}</Text>
+                    <Text style={styles.txDate}>{formatDate(tx.createdAt)}</Text>
+                  </View>
+                  <Text style={[styles.txAmount, { color: getTransactionColor(tx.type) }]}>
+                    {tx.type === 'payout' ? '+' : '-'}{formatCurrency(tx.amount)}
                   </Text>
-                  <Text style={styles.transactionTime}>{transaction.time}</Text>
                 </View>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -171,201 +258,123 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background.light,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  welcomeText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: Typography.fontFamily.semibold,
-    color: Colors.text.primary.light,
-    textAlign: 'center',
-    marginHorizontal: Spacing.sm,
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  safeArea: { flex: 1, backgroundColor: Colors.background.light },
+  scrollView: { flex: 1 },
+
+  // Balance Card
   balanceCard: {
     backgroundColor: Colors.primary.main,
     marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.lg,
     padding: Spacing.lg,
     borderRadius: 20,
-    marginBottom: Spacing.lg,
-    position: 'relative',
-    alignItems: "center",
-    justifyContent: "center",
   },
-  eyeButton: {
-    position: 'absolute',
-    top: Spacing.lg,
-    right: Spacing.lg,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  balanceLabel: {
-    fontSize: 12,
-    fontFamily: Typography.fontFamily.regular,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: Spacing.xs,
-  },
-  balanceAmount: {
-    fontSize: 30,
-    fontWeight: '700',
-    fontFamily: Typography.fontFamily.bold,
-    color: '#FFFFFF',
-    marginBottom: Spacing.xs,
-  },
-  nextPayout: {
-    fontSize: 10,
-    fontFamily: Typography.fontFamily.medium,
-    textDecorationLine: "underline",
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  actionGrid: {
+  balanceCardTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md },
+  balanceCardLeft: { flex: 1 },
+  balanceCardRight: { alignItems: 'flex-end' },
+  balanceLabel: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 4 },
+  balanceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  balanceAmount: { fontSize: 28, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF' },
+  eyeButton: { padding: 4 },
+  activeGroupsLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 2 },
+  activeGroupsCount: { fontSize: 28, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF', textAlign: 'right' },
+  pendingGroupsText: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
+  balanceStats: { flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: Spacing.md, gap: 0 },
+  balanceStat: { width: '50%', paddingVertical: 4, paddingRight: Spacing.sm },
+  balanceStatLeft: { paddingRight: Spacing.md },
+  balanceStatLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.7)', marginBottom: 2 },
+  balanceStatValue: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
+  nextPayoutRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    gap: Spacing.sm,
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
   },
+  nextPayoutLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.7)', marginBottom: 2 },
+  nextPayoutDate: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
+  nextPayoutGroup: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.7)' },
+  nextPayoutRight: { alignItems: 'flex-end' },
+  nextPayoutAmount: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
+
+  // Error
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fef2f2', marginHorizontal: Spacing.lg, marginBottom: Spacing.md,
+    padding: Spacing.md, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#ef4444',
+  },
+  errorText: { flex: 1, fontSize: 13, color: '#ef4444', fontFamily: Typography.fontFamily.regular },
+  retryButton: { marginLeft: Spacing.sm },
+  retryText: { fontSize: 13, color: Colors.primary.main, fontFamily: Typography.fontFamily.semibold },
+
+  // Sections
+  section: { paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
+  sectionTitle: { fontSize: 17, fontFamily: Typography.fontFamily.bold, color: Colors.text.primary.light, marginBottom: Spacing.md },
+  viewAllText: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
+
+  // Quick Actions
+  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   actionButton: {
-    width: '31.5%',
+    width: '23%',
     backgroundColor: '#FFFFFF',
-    padding: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: 4,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.neutral[200],
   },
   actionIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.primary.light + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  actionButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: Typography.fontFamily.semibold,
-    color: Colors.text.primary.light,
-    textAlign: 'center',
-  },
-  transactionsSection: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  transactionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  transactionsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: Typography.fontFamily.bold,
-    color: Colors.text.primary.light,
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: Typography.fontFamily.semibold,
-    color: Colors.primary.main,
-  },
-  todayLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: Typography.fontFamily.semibold,
-    color: Colors.neutral[600],
-    marginBottom: Spacing.sm,
-  },
-  transactionsList: {
-    gap: Spacing.sm,
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-  },
-  transactionAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.primary.light + '20',
+    backgroundColor: Colors.primary.main + '15',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
+    marginBottom: Spacing.xs,
   },
-  transactionAvatarText: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: Typography.fontFamily.semibold,
-    color: Colors.primary.main,
+  actionButtonText: { fontSize: 10, fontFamily: Typography.fontFamily.semibold, color: Colors.text.primary.light, textAlign: 'center' },
+
+  // Groups
+  list: { gap: Spacing.sm },
+  groupCard: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF',
+    padding: Spacing.md, borderRadius: 12, borderWidth: 1, borderColor: Colors.neutral[200],
   },
-  transactionInfo: {
-    flex: 1,
+  groupIconWrap: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: Colors.primary.main + '15',
+    justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md,
   },
-  transactionName: {
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: Typography.fontFamily.semibold,
-    color: Colors.text.primary.light,
-    marginBottom: 2,
+  groupInfo: { flex: 1 },
+  groupName: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.text.primary.light },
+  groupMeta: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], marginTop: 2 },
+  statusBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: 8 },
+  statusText: { fontSize: 11, fontFamily: Typography.fontFamily.semibold },
+
+  // Transactions
+  txItem: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF',
+    padding: Spacing.md, borderRadius: 12, borderWidth: 1, borderColor: Colors.neutral[200],
   },
-  transactionType: {
-    fontSize: 13,
-    fontFamily: Typography.fontFamily.regular,
-    color: Colors.neutral[600],
+  txIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md },
+  txInfo: { flex: 1 },
+  txType: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.text.primary.light },
+  txDate: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500] },
+  txAmount: { fontSize: 14, fontFamily: Typography.fontFamily.bold },
+
+  // Empty states
+  emptyCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: Colors.neutral[200],
+    padding: Spacing.xl, alignItems: 'center', gap: Spacing.sm,
   },
-  transactionAmountContainer: {
-    alignItems: 'flex-end',
-  },
-  transactionAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-    fontFamily: Typography.fontFamily.bold,
-    marginBottom: 2,
-  },
-  creditAmount: {
-    color: Colors.success.main,
-  },
-  debitAmount: {
-    color: Colors.error.main,
-  },
-  transactionTime: {
-    fontSize: 12,
-    fontFamily: Typography.fontFamily.regular,
-    color: Colors.neutral[500],
-  },
+  emptyText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500] },
+  emptyActions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
+  emptyBtn: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg, borderRadius: 8, backgroundColor: Colors.primary.main },
+  emptyBtnOutline: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: Colors.primary.main },
+  emptyBtnText: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
+  emptyBtnOutlineText: { color: Colors.primary.main },
 });

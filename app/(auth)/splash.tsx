@@ -27,12 +27,12 @@ export default function SplashScreen() {
     rootNavigationState?.routeNames?.length > 0
   );
 
-  // Timer to ensure splash screen displays for minimum 3.5 seconds
+  // Timer to ensure splash screen displays for minimum 3 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log('[SplashScreen] Minimum display time (3.5s) elapsed');
+      console.log('[SplashScreen] Minimum display time (3s) elapsed');
       setMinTimeElapsed(true);
-    }, 3500);
+    }, 3000);
     
     return () => clearTimeout(timer);
   }, []);
@@ -48,7 +48,7 @@ export default function SplashScreen() {
     
     // Only navigate once, when all conditions are met:
     // 1. Haven't navigated yet
-    // 2. Minimum display time (3.5s) has elapsed
+    // 2. Minimum display time (3s) has elapsed
     // 3. Authentication loading is complete
     // 4. Navigation system is fully ready (has key AND route names)
     if (!hasNavigated && minTimeElapsed && !isLoading && navigationReady) {
@@ -59,7 +59,7 @@ export default function SplashScreen() {
       setTimeout(() => {
         if (isAuthenticated) {
           console.log('[SplashScreen] User authenticated, going to tabs');
-          router.replace('/(tabs)');
+          router.replace('/(tabs)/home');
         } else {
           console.log('[SplashScreen] User not authenticated, going to onboarding');
           router.replace('/(auth)/onboarding');

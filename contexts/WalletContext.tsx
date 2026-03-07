@@ -7,24 +7,12 @@
  * - Computed properties (totalContributed, totalReceived, pendingAmount)
  * - Caching in AsyncStorage
  * - Pull-to-refresh support
- * 
- * Validates: Requirements 4.2, 4.6, 9.2, 10.2, 10.4, 10.5, 10.6
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { ApiService } from '../services/apiService';
+import { WalletService, Wallet } from '../services/walletService';
+import { TransactionService, Transaction, TransactionQuery } from '../services/transactionService';
 import { StorageService, STORAGE_KEYS } from '../services/storageService';
-import { Wallet, Transaction } from '../types/models';
-
-/**
- * Transaction filters interface
- */
-export interface TransactionFilters {
-  type?: Transaction['type'];
-  startDate?: string;
-  endDate?: string;
-  groupId?: string;
-}
 
 /**
  * Wallet context value interface
@@ -38,7 +26,7 @@ export interface WalletContextValue {
   
   // Actions
   fetchWallet: () => Promise<void>;
-  fetchTransactions: (filters?: TransactionFilters) => Promise<void>;
+  fetchTransactions: (query?: TransactionQuery) => Promise<void>;
   refreshWallet: () => Promise<void>;
   
   // Computed properties
@@ -77,25 +65,19 @@ export function WalletProvider({ children }: WalletProviderProps) {
   useEffect(() => {
     const loadCachedData = async () => {
       try {
-        // Load cached wallet data
+        // Load cached wallet data for immediate display
         const cachedWallet = await StorageService.get<Wallet>(STORAGE_KEYS.WALLET_DATA);
         if (cachedWallet) {
           setWallet(cachedWallet);
         }
 
-        // Load cached transactions
+        // Load cached transactions for immediate display
         const cachedTransactions = await StorageService.get<Transaction[]>(STORAGE_KEYS.TRANSACTIONS_DATA);
         if (cachedTransactions) {
           setTransactions(cachedTransactions);
         }
-
-        // Fetch fresh data in the background - suppress errors if API unavailable
-        try {
-          await fetchWallet();
-          await fetchTransactions();
-        } catch (err) {
-          // Silently suppress API errors when backend isn't running
-        }
+        // NOTE: Live fetch is triggered by each screen on mount, not here,
+        // to avoid unauthenticated requests during app startup.
       } catch (err) {
         // Silently suppress error
       }
@@ -114,17 +96,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
       setIsLoading(true);
       setError(null);
 
-      // Call API to get wallet data
-      const response = await ApiService.get<Wallet>('/wallets/me');
-
-      if (response.success && response.data) {
-        setWallet(response.data);
-        
-        // Cache wallet data
-        await StorageService.set(STORAGE_KEYS.WALLET_DATA, response.data);
-      } else {
-        throw new Error('Failed to fetch wallet data');
-      }
+      // Call WalletService to get wallet data
+      const response = await WalletService.getMyWallet();
+      setWallet(response.wallet);
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to load wallet data';
       setError(errorMessage);
@@ -138,41 +112,16 @@ export function WalletProvider({ children }: WalletProviderProps) {
    * Fetch transactions from API with optional filters
    * Caches the result in AsyncStorage
    * 
-   * @param filters - Optional filters for transactions
+   * @param query - Optional query parameters for transactions
    */
-  const fetchTransactions = async (filters?: TransactionFilters): Promise<void> => {
+  const fetchTransactions = async (query?: TransactionQuery): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Build query parameters from filters
-      const params: Record<string, any> = {};
-      if (filters?.type) {
-        params.type = filters.type;
-      }
-      if (filters?.startDate) {
-        params.startDate = filters.startDate;
-      }
-      if (filters?.endDate) {
-        params.endDate = filters.endDate;
-      }
-      if (filters?.groupId) {
-        params.groupId = filters.groupId;
-      }
-
-      // Call API to get transactions
-      const response = await ApiService.get<Transaction[]>('/transactions', params);
-
-      if (response.success && response.data) {
-        setTransactions(response.data);
-        
-        // Cache transactions data (only if no filters applied)
-        if (!filters || Object.keys(filters).length === 0) {
-          await StorageService.set(STORAGE_KEYS.TRANSACTIONS_DATA, response.data);
-        }
-      } else {
-        throw new Error('Failed to fetch transactions');
-      }
+      // Call TransactionService to get transactions
+      const response = await TransactionService.getTransactions(query);
+      setTransactions(response.transactions);
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to load transactions';
       setError(errorMessage);

@@ -4,13 +4,19 @@
  */
 
 export interface User {
-  id: string;
+  _id: string;
   email: string;
   firstName: string;
   lastName: string;
   phoneNumber: string;
-  avatarUrl?: string;
-  kycStatus: 'pending' | 'verified' | 'rejected';
+  dateOfBirth: string;
+  address?: string;
+  isVerified: boolean;
+  verifiedAt?: string;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  isActive: boolean;
+  role: 'user' | 'admin' | 'moderator';
   createdAt: string;
   updatedAt: string;
 }
