@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View, Text, StyleSheet, TextInput, Pressable, ScrollView,
+  Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Switch
+} from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +12,6 @@ import { Spacing } from '@/constants/spacing';
 import { WalletService } from '@/services/walletService';
 import { useWallet } from '@/contexts/WalletContext';
 
-// Nigerian banks list
 const NIGERIAN_BANKS = [
   { code: '044', name: 'Access Bank' },
   { code: '023', name: 'Citibank' },
@@ -35,11 +37,6 @@ const NIGERIAN_BANKS = [
   { code: '057', name: 'Zenith Bank' },
 ];
 
-/**
- * Add Bank Account Screen
- * 
- * Allows users to verify and add a bank account for payouts
- */
 export default function AddBankAccountScreen() {
   const { refreshWallet } = useWallet();
 
@@ -50,23 +47,21 @@ export default function AddBankAccountScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [makePrimary, setMakePrimary] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleVerify = async () => {
     const newErrors: Record<string, string> = {};
-
     if (!accountNumber || accountNumber.length !== 10) {
       newErrors.accountNumber = 'Account number must be exactly 10 digits';
     }
     if (!selectedBank) {
       newErrors.bank = 'Please select a bank';
     }
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-
     try {
       setIsVerifying(true);
       setErrors({});
@@ -82,10 +77,17 @@ export default function AddBankAccountScreen() {
 
   const handleAdd = async () => {
     if (!isVerified || !selectedBank) return;
-
     try {
       setIsAdding(true);
-      await WalletService.addBankAccount(accountNumber, verifiedAccountName, selectedBank.code, selectedBank.name);
+      const result = await WalletService.addBankAccount(
+        accountNumber,
+        verifiedAccountName,
+        selectedBank.code,
+        selectedBank.name
+      );
+      if (makePrimary && result.bankAccount._id && !result.bankAccount.isPrimary) {
+        await WalletService.setPrimaryBankAccount(result.bankAccount._id);
+      }
       await refreshWallet();
       Alert.alert('Success', 'Bank account added successfully', [
         { text: 'OK', onPress: () => router.back() }
@@ -110,7 +112,6 @@ export default function AddBankAccountScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={Colors.text.primary.light} />
@@ -121,11 +122,10 @@ export default function AddBankAccountScreen() {
 
         <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
-            {/* Account Number */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Account Number</Text>
               <TextInput
-                style={[styles.input, errors.accountNumber && styles.inputError]}
+                style={[styles.input, errors.accountNumber ? styles.inputError : undefined]}
                 placeholder="Enter 10-digit account number"
                 placeholderTextColor={Colors.neutral[500]}
                 value={accountNumber}
@@ -134,22 +134,21 @@ export default function AddBankAccountScreen() {
                 maxLength={10}
                 editable={!isVerifying && !isAdding}
               />
-              {errors.accountNumber && <Text style={styles.errorText}>{errors.accountNumber}</Text>}
+              {errors.accountNumber ? <Text style={styles.errorText}>{errors.accountNumber}</Text> : null}
             </View>
 
-            {/* Bank Selection */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Bank</Text>
               <Pressable
-                style={[styles.bankSelector, errors.bank && styles.inputError]}
+                style={[styles.bankSelector, errors.bank ? styles.inputError : undefined]}
                 onPress={() => setShowBankPicker(!showBankPicker)}
               >
                 <Text style={selectedBank ? styles.bankSelectorText : styles.bankSelectorPlaceholder}>
                   {selectedBank ? selectedBank.name : 'Select your bank'}
                 </Text>
-                <Ionicons name={showBankPicker ? "chevron-up" : "chevron-down"} size={20} color={Colors.neutral[500]} />
+                <Ionicons name={showBankPicker ? 'chevron-up' : 'chevron-down'} size={20} color={Colors.neutral[500]} />
               </Pressable>
-              {errors.bank && <Text style={styles.errorText}>{errors.bank}</Text>}
+              {errors.bank ? <Text style={styles.errorText}>{errors.bank}</Text> : null}
 
               {showBankPicker && (
                 <View style={styles.bankList}>
@@ -157,7 +156,7 @@ export default function AddBankAccountScreen() {
                     {NIGERIAN_BANKS.map((bank) => (
                       <Pressable
                         key={bank.code}
-                        style={[styles.bankItem, selectedBank?.code === bank.code && styles.bankItemSelected]}
+                        style={[styles.bankItem, selectedBank?.code === bank.code ? styles.bankItemSelected : undefined]}
                         onPress={() => {
                           setSelectedBank(bank);
                           setShowBankPicker(false);
@@ -168,7 +167,7 @@ export default function AddBankAccountScreen() {
                           }
                         }}
                       >
-                        <Text style={[styles.bankItemText, selectedBank?.code === bank.code && styles.bankItemTextSelected]}>
+                        <Text style={[styles.bankItemText, selectedBank?.code === bank.code ? styles.bankItemTextSelected : undefined]}>
                           {bank.name}
                         </Text>
                       </Pressable>
@@ -178,10 +177,9 @@ export default function AddBankAccountScreen() {
               )}
             </View>
 
-            {/* Verify Button */}
             {!isVerified && (
               <Pressable
-                style={[styles.verifyButton, (isVerifying || !accountNumber || !selectedBank) && styles.buttonDisabled]}
+                style={[styles.verifyButton, (isVerifying || !accountNumber || !selectedBank) ? styles.buttonDisabled : undefined]}
                 onPress={handleVerify}
                 disabled={isVerifying || !accountNumber || !selectedBank}
               >
@@ -193,19 +191,19 @@ export default function AddBankAccountScreen() {
               </Pressable>
             )}
 
-            {errors.verify && (
+            {errors.verify ? (
               <View style={styles.errorBanner}>
                 <Text style={styles.errorBannerText}>{errors.verify}</Text>
               </View>
-            )}
+            ) : null}
 
-            {/* Verified Account Details */}
             {isVerified && (
               <View style={styles.verifiedCard}>
                 <View style={styles.verifiedHeader}>
                   <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
                   <Text style={styles.verifiedTitle}>Account Verified</Text>
                 </View>
+
                 <View style={styles.verifiedDetails}>
                   <View style={styles.verifiedRow}>
                     <Text style={styles.verifiedLabel}>Account Name</Text>
@@ -221,12 +219,28 @@ export default function AddBankAccountScreen() {
                   </View>
                 </View>
 
+                <View style={styles.primaryToggleRow}>
+                  <View style={styles.primaryToggleInfo}>
+                    <Text style={styles.primaryToggleLabel}>Set as primary account</Text>
+                    <Text style={styles.primaryToggleHint}>Used for automatic payouts</Text>
+                  </View>
+                  <Switch
+                    value={makePrimary}
+                    onValueChange={setMakePrimary}
+                    trackColor={{ false: Colors.neutral[300], true: Colors.primary.main + '80' }}
+                    thumbColor={makePrimary ? Colors.primary.main : Colors.neutral[100]}
+                  />
+                </View>
+
                 <View style={styles.verifiedActions}>
-                  <Pressable style={styles.changeButton} onPress={() => { setIsVerified(false); setVerifiedAccountName(''); }}>
+                  <Pressable
+                    style={styles.changeButton}
+                    onPress={() => { setIsVerified(false); setVerifiedAccountName(''); }}
+                  >
                     <Text style={styles.changeButtonText}>Change</Text>
                   </Pressable>
                   <Pressable
-                    style={[styles.addButton, isAdding && styles.buttonDisabled]}
+                    style={[styles.addButton, isAdding ? styles.buttonDisabled : undefined]}
                     onPress={handleAdd}
                     disabled={isAdding}
                   >
@@ -340,6 +354,18 @@ const styles = StyleSheet.create({
   verifiedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   verifiedLabel: { fontSize: 13, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600] },
   verifiedValue: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.text.primary.light },
+  primaryToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral[100],
+  },
+  primaryToggleInfo: { flex: 1, marginRight: Spacing.md },
+  primaryToggleLabel: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.text.primary.light },
+  primaryToggleHint: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], marginTop: 2 },
   verifiedActions: {
     flexDirection: 'row',
     gap: Spacing.sm,

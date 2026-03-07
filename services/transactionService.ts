@@ -19,7 +19,7 @@ export interface Transaction {
   userId: string;
   groupId: string;
   transactionId: string;
-  type: 'contribution' | 'payout' | 'withdrawal';
+  type: 'contribution' | 'payout' | 'withdrawal' | 'fund_wallet';
   amount: number;
   status: 'pending' | 'completed' | 'failed' | 'cancelled';
   description: string;
@@ -41,7 +41,7 @@ export interface Transaction {
  * Transaction query parameters
  */
 export interface TransactionQuery {
-  type?: 'contribution' | 'payout' | 'withdrawal';
+  type?: 'contribution' | 'payout' | 'withdrawal' | 'fund_wallet';
   groupId?: string;
   status?: 'pending' | 'completed' | 'failed' | 'cancelled';
   limit?: number;

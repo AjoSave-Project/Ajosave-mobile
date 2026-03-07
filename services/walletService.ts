@@ -141,6 +141,59 @@ class WalletServiceClass {
 
     throw new Error('Failed to get bank accounts');
   }
+
+  /**
+   * Set a bank account as primary
+   * @param accountId - Bank account subdocument ID
+   */
+  async setPrimaryBankAccount(accountId: string): Promise<void> {
+    const response = await ApiService.patch<{}>(`/wallets/bank-accounts/${accountId}/set-primary`, {});
+
+    if (!response.success) {
+      throw new Error('Failed to set primary account');
+    }
+  }
+
+  /**
+   * Initialize wallet funding via Paystack
+   * @param amount - Amount in Naira
+   * @param email - User email for Paystack
+   */
+  async initializeFunding(amount: number, email: string): Promise<{
+    authorizationUrl: string;
+    accessCode: string;
+    reference: string;
+  }> {
+    const response = await ApiService.post<{
+      authorizationUrl: string;
+      accessCode: string;
+      reference: string;
+    }>('/wallets/fund/initialize', { amount, email });
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    throw new Error('Failed to initialize funding');
+  }
+
+  /**
+   * Verify wallet funding after Paystack payment
+   * @param reference - Paystack payment reference
+   */
+  async verifyFunding(reference: string): Promise<{
+    wallet: { availableBalance: number; totalBalance: number };
+  }> {
+    const response = await ApiService.post<{
+      wallet: { availableBalance: number; totalBalance: number };
+    }>('/wallets/fund/verify', { reference });
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    throw new Error('Failed to verify funding');
+  }
 }
 
 // Export singleton instance

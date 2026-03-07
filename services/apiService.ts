@@ -27,7 +27,7 @@ export interface ApiResponse<T> {
  */
 interface RequestConfig {
   url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers: Record<string, string>;
   body?: any;
   timeout?: number;
@@ -127,6 +127,14 @@ class ApiServiceClass {
   }
 
   /**
+   * PATCH request
+   */
+  async patch<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    const url = this.buildUrl(endpoint);
+    return this.request<T>('PATCH', url, data);
+  }
+
+  /**
    * Build full URL with query parameters
    */
   private buildUrl(endpoint: string, params?: Record<string, any>): string {
@@ -151,7 +159,7 @@ class ApiServiceClass {
    * Core request method with retry logic
    */
   private async request<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     url: string,
     body?: any,
     retryCount = 0

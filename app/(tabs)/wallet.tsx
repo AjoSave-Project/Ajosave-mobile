@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, ActivityIndicator, TextInput, Modal, Alert } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,19 +9,23 @@ import { useWallet } from '@/contexts/WalletContext';
 import { WalletService, BankAccount } from '@/services/walletService';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCurrency, formatDate, formatAccountNumber } from '@/utils/formatting';
+import { useAuth } from '@/contexts/AuthContext';
+import { PaystackProvider, usePaystack } from 'react-native-paystack-webview';
 
-/**
- * Wallet Screen
- * 
- * Displays wallet balance, transaction history, and bank accounts
- */
-export default function WalletScreen() {
+const PAYSTACK_KEY = process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
+
+function WalletContent() {
   const { wallet, transactions, isLoading, error, fetchWallet, fetchTransactions, refreshWallet } = useWallet();
+  const { user } = useAuth();
+  const { popup } = usePaystack();
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'contribution' | 'payout' | 'withdrawal'>('all');
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
   const [bankError, setBankError] = useState<string | null>(null);
+  const [showFundModal, setShowFundModal] = useState(false);
+  const [fundAmount, setFundAmount] = useState('');
+  const [isFunding, setIsFunding] = useState(false);
 
   useEffect(() => {
     fetchWallet();
@@ -36,9 +40,7 @@ export default function WalletScreen() {
       const response = await WalletService.getBankAccounts();
       setBankAccounts(response.bankAccounts);
     } catch (err: any) {
-      const msg = err?.message || 'Failed to load bank accounts';
-      console.error('Failed to load bank accounts:', msg);
-      setBankError(msg);
+      setBankError(err?.message || 'Failed to load bank accounts');
     } finally {
       setLoadingBankAccounts(false);
     }
@@ -53,6 +55,44 @@ export default function WalletScreen() {
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const handleFundWallet = () => {
+    const amount = parseFloat(fundAmount);
+    if (!amount || amount < 100) {
+      Alert.alert('Invalid Amount', 'Minimum funding amount is ₦100');
+      return;
+    }
+    if (!user?.email) {
+      Alert.alert('Error', 'User email not found');
+      return;
+    }
+    setShowFundModal(false);
+    setIsFunding(true);
+    const ref = `FUND-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    popup.checkout({
+      email: user.email,
+      amount: amount * 100,
+      reference: ref,
+      onSuccess: async (response: any) => {
+        try {
+          const reference = response?.transactionRef?.reference || response?.reference || ref;
+          await WalletService.verifyFunding(reference);
+          await refreshWallet();
+          await fetchTransactions();
+          setFundAmount('');
+          Alert.alert('Success', 'Wallet funded successfully!');
+        } catch (err: any) {
+          Alert.alert('Error', err.message || 'Failed to verify payment');
+        } finally {
+          setIsFunding(false);
+        }
+      },
+      onCancel: () => {
+        setIsFunding(false);
+        setFundAmount('');
+      },
+    });
   };
 
   const filteredTransactions = Array.isArray(transactions)
@@ -85,12 +125,9 @@ export default function WalletScreen() {
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Balance Card */}
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceAmount}>
-            {formatCurrency(wallet?.availableBalance ?? 0)}
-          </Text>
+          <Text style={styles.balanceAmount}>{formatCurrency(wallet?.availableBalance ?? 0)}</Text>
           <View style={styles.balanceStats}>
             <View style={styles.balanceStat}>
               <Text style={styles.balanceStatLabel}>Available</Text>
@@ -109,19 +146,67 @@ export default function WalletScreen() {
               <Text style={styles.balanceStatValue}>{formatCurrency(wallet?.totalPayouts ?? 0)}</Text>
             </View>
           </View>
+          <Pressable
+            style={[styles.fundButton, isFunding ? styles.fundButtonDisabled : undefined]}
+            onPress={() => setShowFundModal(true)}
+            disabled={isFunding}
+          >
+            {isFunding ? (
+              <ActivityIndicator color={Colors.primary.main} size="small" />
+            ) : (
+              <>
+                <Ionicons name="add-circle-outline" size={18} color={Colors.primary.main} />
+                <Text style={styles.fundButtonText}>Fund Wallet</Text>
+              </>
+            )}
+          </Pressable>
         </View>
 
-        {/* Error Banner */}
-        {error && (
+        <Modal visible={showFundModal} transparent animationType="slide" onRequestClose={() => setShowFundModal(false)}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowFundModal(false)}>
+            <Pressable style={styles.modalSheet} onPress={() => {}}>
+              <View style={styles.modalHandle} />
+              <Text style={styles.modalTitle}>Fund Wallet</Text>
+              <Text style={styles.modalSubtitle}>Enter the amount you want to add to your wallet</Text>
+              <View style={styles.amountInputWrapper}>
+                <Text style={styles.currencySymbol}>₦</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor={Colors.neutral[400]}
+                  value={fundAmount}
+                  onChangeText={setFundAmount}
+                  keyboardType="decimal-pad"
+                  autoFocus
+                />
+              </View>
+              <View style={styles.quickAmounts}>
+                {[1000, 2000, 5000, 10000].map(amt => (
+                  <Pressable key={amt} style={styles.quickAmountChip} onPress={() => setFundAmount(String(amt))}>
+                    <Text style={styles.quickAmountText}>₦{amt.toLocaleString()}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable
+                style={[styles.proceedButton, (!fundAmount || parseFloat(fundAmount) < 100) ? styles.buttonDisabled : undefined]}
+                onPress={handleFundWallet}
+                disabled={!fundAmount || parseFloat(fundAmount) < 100}
+              >
+                <Text style={styles.proceedButtonText}>Proceed to Payment</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {error ? (
           <View style={styles.errorBanner}>
             <Text style={styles.errorText}>{error}</Text>
             <Pressable onPress={() => { fetchWallet(); fetchTransactions(); }} style={styles.retryButton}>
               <Text style={styles.retryText}>Retry</Text>
             </Pressable>
           </View>
-        )}
+        ) : null}
 
-        {/* Bank Accounts Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Bank Accounts</Text>
@@ -129,7 +214,6 @@ export default function WalletScreen() {
               <Text style={styles.addText}>+ Add</Text>
             </Pressable>
           </View>
-
           {loadingBankAccounts ? (
             <ActivityIndicator color={Colors.primary.main} style={styles.loader} />
           ) : bankError ? (
@@ -149,11 +233,11 @@ export default function WalletScreen() {
               <View style={styles.bankAccountsList}>
                 {bankAccounts.map((account) => (
                   <View key={account._id} style={styles.bankAccountCard}>
-                    {account.isPrimary && (
+                    {account.isPrimary ? (
                       <View style={styles.primaryBadge}>
                         <Text style={styles.primaryBadgeText}>Primary</Text>
                       </View>
-                    )}
+                    ) : null}
                     <Text style={styles.bankName}>{account.bankName}</Text>
                     <Text style={styles.accountNumber}>{formatAccountNumber(account.accountNumber)}</Text>
                     <Text style={styles.accountName}>{account.accountName}</Text>
@@ -168,17 +252,16 @@ export default function WalletScreen() {
           )}
         </View>
 
-        {/* Transaction Filters */}
         <View style={styles.filtersContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.filters}>
               {(['all', 'contribution', 'payout', 'withdrawal'] as const).map((filter) => (
                 <Pressable
                   key={filter}
-                  style={[styles.filter, activeFilter === filter && styles.filterActive]}
+                  style={[styles.filter, activeFilter === filter ? styles.filterActive : undefined]}
                   onPress={() => setActiveFilter(filter)}
                 >
-                  <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>
+                  <Text style={[styles.filterText, activeFilter === filter ? styles.filterTextActive : undefined]}>
                     {filter.charAt(0).toUpperCase() + filter.slice(1)}
                   </Text>
                 </Pressable>
@@ -187,10 +270,8 @@ export default function WalletScreen() {
           </ScrollView>
         </View>
 
-        {/* Transactions List */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Transactions</Text>
-
           {isLoading && filteredTransactions.length === 0 ? (
             <ActivityIndicator color={Colors.primary.main} style={styles.loader} />
           ) : filteredTransactions.length === 0 ? (
@@ -207,22 +288,22 @@ export default function WalletScreen() {
                   </View>
                   <View style={styles.transactionInfo}>
                     <Text style={styles.transactionTitle}>
-                      {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                      {transaction.type === 'fund_wallet' ? 'Fund Wallet' : transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
                     </Text>
-                    {transaction.description && (
+                    {transaction.description ? (
                       <Text style={styles.transactionDesc} numberOfLines={1}>{transaction.description}</Text>
-                    )}
+                    ) : null}
                     <Text style={styles.transactionDate}>{formatDate(transaction.createdAt)}</Text>
                   </View>
                   <View style={styles.transactionRight}>
                     <Text style={[styles.transactionAmount, { color: getTransactionColor(transaction.type) }]}>
-                      {transaction.type === 'payout' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                      {transaction.type === 'payout' || transaction.type === 'fund_wallet' ? '+' : '-'}{formatCurrency(transaction.amount)}
                     </Text>
                     <View style={[
                       styles.statusBadge,
-                      transaction.status === 'completed' && styles.statusCompleted,
-                      transaction.status === 'pending' && styles.statusPending,
-                      transaction.status === 'failed' && styles.statusFailed,
+                      transaction.status === 'completed' ? styles.statusCompleted : undefined,
+                      transaction.status === 'pending' ? styles.statusPending : undefined,
+                      transaction.status === 'failed' ? styles.statusFailed : undefined,
                     ]}>
                       <Text style={styles.statusText}>{transaction.status}</Text>
                     </View>
@@ -253,6 +334,65 @@ const styles = StyleSheet.create({
   balanceStat: { width: '50%', paddingVertical: 4 },
   balanceStatLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.7)', marginBottom: 2 },
   balanceStatValue: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
+  fundButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: Spacing.sm,
+    borderRadius: 10,
+  },
+  fundButtonDisabled: { opacity: 0.6 },
+  fundButtonText: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
+  buttonDisabled: { opacity: 0.5 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.neutral[300],
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modalTitle: { fontSize: 20, fontFamily: Typography.fontFamily.bold, color: Colors.text.primary.light, marginBottom: Spacing.xs },
+  modalSubtitle: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], marginBottom: Spacing.lg },
+  amountInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral[100],
+    borderRadius: 12,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  currencySymbol: { fontSize: 22, fontFamily: Typography.fontFamily.bold, color: Colors.text.primary.light, marginRight: Spacing.xs },
+  amountInput: {
+    flex: 1,
+    fontSize: 28,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary.light,
+    paddingVertical: Spacing.md,
+  },
+  quickAmounts: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg },
+  quickAmountChip: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 20,
+    backgroundColor: Colors.primary.main + '15',
+    borderWidth: 1,
+    borderColor: Colors.primary.main + '40',
+  },
+  quickAmountText: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
+  proceedButton: { backgroundColor: Colors.primary.main, paddingVertical: Spacing.md, borderRadius: 12, alignItems: 'center' },
+  proceedButtonText: { fontSize: 16, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -297,13 +437,7 @@ const styles = StyleSheet.create({
   },
   addBankText: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
   bankAccountsList: { flexDirection: 'row', gap: Spacing.md },
-  bankAccountCard: {
-    width: 180,
-    backgroundColor: Colors.primary.main,
-    padding: Spacing.md,
-    borderRadius: 12,
-    position: 'relative',
-  },
+  bankAccountCard: { width: 180, backgroundColor: Colors.primary.main, padding: Spacing.md, borderRadius: 12, position: 'relative' },
   primaryBadge: {
     position: 'absolute',
     top: Spacing.sm,
@@ -352,14 +486,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.neutral[200],
   },
-  transactionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
+  transactionIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md },
   transactionInfo: { flex: 1 },
   transactionTitle: { fontSize: 15, fontFamily: Typography.fontFamily.semibold, color: Colors.text.primary.light, marginBottom: 2 },
   transactionDesc: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], marginBottom: 2 },
@@ -374,3 +501,11 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: Spacing.xl * 2 },
   emptyStateText: { fontSize: 16, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], marginTop: Spacing.md },
 });
+
+export default function WalletScreen() {
+  return (
+    <PaystackProvider publicKey={PAYSTACK_KEY}>
+      <WalletContent />
+    </PaystackProvider>
+  );
+}
