@@ -31,6 +31,10 @@ SplashScreen.preventAutoHideAsync();
 const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
 ApiService.setBaseUrl(apiUrl);
 
+if (__DEV__) {
+  console.log(`🌐 API URL: ${apiUrl} [${process.env.EXPO_PUBLIC_ENV || 'development'}]`);
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Gilroy-Regular': require('@/assets/fonts/Gilroy-Regular.ttf'),
