@@ -825,12 +825,12 @@ const styles = StyleSheet.create({
   bankHolder: { fontSize: 11, fontFamily: Typography.fontFamily.medium, color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase' },
   addBankCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', padding: 16, borderRadius: 14,
+    backgroundColor: 'transparent', padding: 16, borderRadius: 14,
     borderWidth: 1.5, borderColor: Colors.primary.main, borderStyle: 'dashed',
   },
   addBankText: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
   addBankSmall: {
-    width: 80, backgroundColor: '#fff', borderRadius: 14,
+    width: 80, backgroundColor: 'transparent', borderRadius: 14,
     borderWidth: 1.5, borderColor: Colors.primary.main, borderStyle: 'dashed',
     justifyContent: 'center', alignItems: 'center', gap: 4, paddingVertical: 12,
   },
