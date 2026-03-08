@@ -10,13 +10,14 @@
 
 /**
  * Primary color palette
- * Royal blue used for main actions and brand identity
+ * Bright blue used for main actions and brand identity
  */
 export const Primary = {
-  main: '#0a79f0ff',      // Royal blue
-  light: '#4889e3ff',     // Light blue
-  dark: '#2654dcff',      // Dark blue
+  main: '#3d71d9ff',      // Bright blue (from the design)
+  light: '#7BA5F3',     // Lighter blue
+  dark: '#2760d3ff',      // Darker blue
   contrast: '#FFFFFF',  // White text on primary
+  background: '#EBF2FF', // Very light blue for backgrounds
 };
 
 /**
@@ -81,21 +82,22 @@ export const Neutral = {
 };
 
 /**
- * Theme-specific background colors
- * Adapt based on light or dark mode
+ * Background colors for the new design
  */
 export const Background = {
-  light: '#FFFFFF',
+  light: '#F5F7FA',     // Light gray-blue background
   dark: '#111827',
+  card: '#FFFFFF',      // White cards
 };
 
 /**
- * Theme-specific surface colors
- * Used for cards, modals, and elevated surfaces
+ * Surface colors for pills and buttons
  */
 export const Surface = {
-  light: '#F9FAFB',
+  light: '#F5F7FA',
   dark: '#1F2937',
+  pill: '#E8F0FE',      // Light blue for pill buttons
+  pillActive: '#5B8DEF', // Active pill button
 };
 
 /**

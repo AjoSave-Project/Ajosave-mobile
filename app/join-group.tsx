@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
-import { Spacing } from '@/constants/spacing';
 import { useGroups } from '@/contexts/GroupsContext';
 import { Group } from '@/services/groupService';
 import { formatCurrency } from '@/utils/formatting';
+import GradientButton from '@/components/ui/GradientButton';
 
 /**
  * Join Group Screen
@@ -154,17 +154,11 @@ export default function JoinGroupScreen() {
                   </View>
                 </View>
 
-                <Pressable
-                  style={[styles.joinButton, isJoining && styles.buttonDisabled]}
+                <GradientButton
+                  label={isJoining ? 'Joining...' : 'Join This Group'}
                   onPress={handleJoin}
                   disabled={isJoining}
-                >
-                  {isJoining ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.joinButtonText}>Join This Group</Text>
-                  )}
-                </Pressable>
+                />
               </View>
             )}
           </View>

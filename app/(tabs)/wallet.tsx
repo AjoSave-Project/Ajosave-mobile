@@ -384,7 +384,11 @@ function WalletContent() {
               <Text style={styles.addBankText}>Add a bank account</Text>
             </Pressable>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingRight: 16 }}
+            >
               <View style={styles.bankList}>
                 {bankAccounts.map(account => (
                   <Pressable
@@ -455,7 +459,12 @@ function WalletContent() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Transactions</Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.md }}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingRight: 16 }}
+            style={{ marginBottom: Spacing.md }}
+          >
             <View style={styles.filters}>
               {(['all', 'contribution', 'payout', 'withdrawal'] as const).map(f => (
                 <Pressable
@@ -804,7 +813,7 @@ const styles = StyleSheet.create({
   unlockText: { fontSize: 12, color: Colors.primary.main, fontFamily: Typography.fontFamily.semibold },
 
   // Bank accounts — FIX: more padding inside cards
-  bankList: { flexDirection: 'row', gap: 12, paddingRight: 16 },
+  bankList: { flexDirection: 'row', gap: 12 },
   bankCard: {
     width: 200,
     backgroundColor: Colors.primary.main,

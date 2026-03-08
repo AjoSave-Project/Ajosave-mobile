@@ -10,6 +10,7 @@ import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import PhoneInput from '@/components/PhoneInput';
 import { extractFieldErrors, getErrorMessage } from '@/utils/errors';
 import { useLocalSearchParams } from 'expo-router';
+import GradientButton from '@/components/ui/GradientButton';
 
 /**
  * Sign In Screen
@@ -170,20 +171,13 @@ export default function SignInScreen() {
                     <Text style={styles.errorBannerText}>{submitError}</Text>
                   </View>
                 ) : null}
-                <Pressable 
-                  style={[styles.button, loading && styles.buttonDisabled]} 
+                
+                <GradientButton
+                  label={loading ? 'Signing in...' : 'Sign in'}
                   onPress={handleSignIn}
                   disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <>
-                      <Text style={styles.buttonText}>Sign in</Text>
-                      <Text style={styles.arrow}>→</Text>
-                    </>
-                  )}
-                </Pressable>
+                  icon="arrow-forward"
+                />
 
                 {/* Sign Up Link */}
                 <View style={styles.signUpContainer}>

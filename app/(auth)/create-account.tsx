@@ -9,6 +9,7 @@ import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import PhoneInput from '@/components/PhoneInput';
+import GradientButton from '@/components/ui/GradientButton';
 
 export default function CreateAccountScreen() {
   const keyboardVisible = useKeyboardVisible();
@@ -109,10 +110,11 @@ export default function CreateAccountScreen() {
               </View>
 
               <View style={styles.buttonSection}>
-                <Pressable style={styles.button} onPress={handleContinue}>
-                  <Text style={styles.buttonText}>Continue</Text>
-                  <Text style={styles.arrow}>→</Text>
-                </Pressable>
+                <GradientButton
+                  label="Continue"
+                  onPress={handleContinue}
+                  icon="arrow-forward"
+                />
 
                 <View style={styles.signInContainer}>
                   <Text style={styles.signInText}>Already have an account? </Text>
