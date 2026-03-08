@@ -224,6 +224,9 @@ function PayContent() {
               <Text style={styles.insufficientText}>It is not your turn to contribute to this group yet.</Text>
             </View>
           )}
+        </View>
+
+        {/* Group selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Group to Pay</Text>
           {fetchError ? (
