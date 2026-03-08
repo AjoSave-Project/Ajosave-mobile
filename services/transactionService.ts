@@ -191,6 +191,26 @@ class TransactionServiceClass {
 
     throw new Error('Failed to get transaction statistics');
   }
+  /**
+   * Claim payout for the current turn recipient
+   * @param groupId - Group ID
+   */
+  async claimPayout(groupId: string): Promise<{
+    transaction: Transaction;
+    wallet: { availableBalance: number; totalPayouts: number };
+  }> {
+    const response = await ApiService.post<{
+      transaction: Transaction;
+      wallet: { availableBalance: number; totalPayouts: number };
+    }>('/transactions/payout', { groupId });
+
+    if (response.success && response.data) {
+      await this.getTransactions();
+      return response.data;
+    }
+
+    throw new Error('Failed to claim payout');
+  }
 }
 
 // Export singleton instance

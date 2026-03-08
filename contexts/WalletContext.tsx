@@ -10,7 +10,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
-import { WalletService, Wallet } from '../services/walletService';
+import { WalletService, Wallet, Lock } from '../services/walletService';
 import { TransactionService, Transaction, TransactionQuery } from '../services/transactionService';
 import { StorageService, STORAGE_KEYS } from '../services/storageService';
 
@@ -21,6 +21,7 @@ export interface WalletContextValue {
   // State
   wallet: Wallet | null;
   transactions: Transaction[];
+  locks: Lock[];
   isLoading: boolean;
   error: string | null;
   
@@ -28,6 +29,7 @@ export interface WalletContextValue {
   fetchWallet: () => Promise<void>;
   fetchTransactions: (query?: TransactionQuery) => Promise<void>;
   refreshWallet: () => Promise<void>;
+  fetchLocks: () => Promise<void>;
   
   // Computed properties
   totalContributed: number;
@@ -56,6 +58,7 @@ interface WalletProviderProps {
 export function WalletProvider({ children }: WalletProviderProps) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [locks, setLocks] = useState<Lock[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -143,11 +146,25 @@ export function WalletProvider({ children }: WalletProviderProps) {
       await Promise.all([
         fetchWallet(),
         fetchTransactions(),
+        fetchLocks(),
       ]);
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to refresh wallet data';
       setError(errorMessage);
       throw err;
+    }
+  };
+
+  /**
+   * Fetch active locks
+   */
+  const fetchLocks = async (): Promise<void> => {
+    try {
+      const response = await WalletService.getLocks();
+      setLocks(response.locks);
+    } catch (err: any) {
+      // Non-critical — don't set global error
+      console.warn('Failed to fetch locks:', err.message);
     }
   };
 
@@ -188,6 +205,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
     // State
     wallet,
     transactions,
+    locks,
     isLoading,
     error,
     
@@ -195,6 +213,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
     fetchWallet,
     fetchTransactions,
     refreshWallet,
+    fetchLocks,
     
     // Computed properties
     totalContributed,

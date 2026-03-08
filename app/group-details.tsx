@@ -14,6 +14,7 @@ import { useGroups } from '@/contexts/GroupsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { TransactionService, Transaction } from '@/services/transactionService';
 import { formatCurrency, formatDate } from '@/utils/formatting';
+import { useWallet } from '@/contexts/WalletContext';
 
 type Tab = 'overview' | 'members' | 'history';
 
@@ -21,11 +22,13 @@ export default function GroupDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { selectedGroup, isLoading, error, fetchGroupDetails } = useGroups();
   const { user } = useAuth();
+  const { refreshWallet } = useWallet();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [groupTransactions, setGroupTransactions] = useState<Transaction[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [claimingPayout, setClaimingPayout] = useState(false);
 
   useEffect(() => {
     if (id) fetchGroupDetails(id);
@@ -62,6 +65,12 @@ export default function GroupDetailsScreen() {
   const group = selectedGroup;
   const isAdmin = group?.admin === user?._id;
 
+  // Check if current user is the payout recipient this turn
+  const myMemberEntry = group?.membersList?.find(
+    (m: any) => m.userId?.toString() === user?._id?.toString() || m.userId === user?._id
+  );
+  const isMyTurn = myMemberEntry?.status === 'current';
+
   const handleShare = async () => {
     if (!group?.invitationCode) return;
     try {
@@ -75,6 +84,33 @@ export default function GroupDetailsScreen() {
     if (!group?.invitationCode) return;
     Clipboard.setString(group.invitationCode);
     Alert.alert('Copied', 'Invitation code copied to clipboard');
+  };
+
+  const handleClaimPayout = async () => {
+    if (!group?._id) return;
+    Alert.alert(
+      'Claim Payout',
+      `Claim your payout of ${formatCurrency(group.contributionAmount * group.maxMembers)} from ${group.name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Claim',
+          onPress: async () => {
+            try {
+              setClaimingPayout(true);
+              await TransactionService.claimPayout(group._id);
+              await refreshWallet();
+              if (id) await fetchGroupDetails(id);
+              Alert.alert('Success', 'Payout received successfully!');
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'Failed to claim payout');
+            } finally {
+              setClaimingPayout(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -294,6 +330,20 @@ export default function GroupDetailsScreen() {
                       <Ionicons name="cash-outline" size={18} color="#fff" />
                       <Text style={styles.actionBtnText}>Make Contribution</Text>
                     </Pressable>
+                    {isMyTurn && (
+                      <Pressable
+                        style={[styles.actionBtn, styles.actionBtnPayout, claimingPayout && { opacity: 0.6 }]}
+                        onPress={handleClaimPayout}
+                        disabled={claimingPayout}
+                      >
+                        {claimingPayout
+                          ? <ActivityIndicator size="small" color="#fff" />
+                          : <Ionicons name="arrow-down-circle-outline" size={18} color="#fff" />}
+                        <Text style={styles.actionBtnText}>
+                          {claimingPayout ? 'Processing...' : `Claim Payout (${formatCurrency(group.contributionAmount * group.maxMembers)})`}
+                        </Text>
+                      </Pressable>
+                    )}
                     {isAdmin && (
                       <Pressable style={[styles.actionBtn, styles.actionBtnOutline]}>
                         <Ionicons name="arrow-forward-circle-outline" size={18} color={Colors.primary.main} />
@@ -550,6 +600,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary.main, paddingVertical: 12, borderRadius: 12, marginTop: 8,
   },
   actionBtnOutline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: Colors.primary.main },
+  actionBtnPayout: { backgroundColor: '#22c55e' },
   actionBtnText: { fontSize: 15, fontFamily: Typography.fontFamily.semibold, color: '#fff' },
 
   // Members

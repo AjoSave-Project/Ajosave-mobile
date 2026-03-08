@@ -38,6 +38,14 @@ export default function HomeScreen() {
   const activeGroups = groupsArray.filter(g => g.status === 'active');
   const pendingGroups = groupsArray.filter(g => g.status === 'pending');
 
+  // Upcoming contributions: active groups with nextContribution within 7 days
+  const now = new Date();
+  const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const upcomingGroups = activeGroups
+    .filter(g => g.nextContribution && new Date(g.nextContribution) <= sevenDaysFromNow)
+    .sort((a, b) => new Date(a.nextContribution!).getTime() - new Date(b.nextContribution!).getTime())
+    .slice(0, 3);
+
   const nextPayout = activeGroups
     .filter(g => g.nextPayout)
     .sort((a, b) => new Date(a.nextPayout!).getTime() - new Date(b.nextPayout!).getTime())[0];
@@ -137,6 +145,29 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+
+        {/* Upcoming Contributions Alert */}
+        {upcomingGroups.length > 0 && (
+          <View style={styles.upcomingAlert}>
+            <View style={styles.upcomingAlertHeader}>
+              <Ionicons name="alarm-outline" size={18} color="#92400e" />
+              <Text style={styles.upcomingAlertTitle}>Upcoming Contributions</Text>
+            </View>
+            {upcomingGroups.map(g => (
+              <View key={g._id} style={styles.upcomingAlertRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.upcomingGroupName}>{g.name}</Text>
+                  <Text style={styles.upcomingGroupMeta}>
+                    {formatCurrency(g.contributionAmount)} · Due {formatDate(g.nextContribution!)}
+                  </Text>
+                </View>
+                <Pressable onPress={() => router.push('/(tabs)/pay')} style={styles.upcomingPayBtn}>
+                  <Text style={styles.upcomingPayBtnText}>Pay</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Error Banner */}
         {error && !isLoading && (
@@ -299,9 +330,31 @@ const styles = StyleSheet.create({
   nextPayoutRight: { alignItems: 'flex-end' },
   nextPayoutAmount: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
 
+  // Upcoming alert
+  upcomingAlert: {
+    backgroundColor: '#fffbeb',
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  upcomingAlertHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
+  upcomingAlertTitle: { fontSize: 14, fontFamily: Typography.fontFamily.bold, color: '#92400e' },
+  upcomingAlertRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#fde68a',
+  },
+  upcomingGroupName: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: '#78350f' },
+  upcomingGroupMeta: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: '#92400e', marginTop: 2 },
+  upcomingPayBtn: {
+    backgroundColor: '#f59e0b', paddingVertical: 4, paddingHorizontal: 12, borderRadius: 8,
+  },
+  upcomingPayBtnText: { fontSize: 12, fontFamily: Typography.fontFamily.semibold, color: '#fff' },
+
   // Error
   errorBanner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#fef2f2', marginHorizontal: Spacing.lg, marginBottom: Spacing.md,
     padding: Spacing.md, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#ef4444',
   },

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, ActivityIndicator, Share, Alert, Clipboard } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -132,56 +132,122 @@ export default function GroupsScreen() {
           </View>
         ) : (
           <View style={styles.groupsList}>
-            {filteredGroups.map((group) => (
-              <Pressable
-                key={group._id}
-                style={styles.groupCard}
-                onPress={() => router.push(`/group-details?id=${group._id}`)}
-              >
-                <View style={styles.groupHeader}>
-                  <View style={styles.groupIcon}>
-                    <Ionicons name="people" size={24} color={Colors.primary.main} />
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(group.status) + '20' }]}>
-                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(group.status) }]} />
-                    <Text style={[styles.statusText, { color: getStatusColor(group.status) }]}>
-                      {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
-                    </Text>
-                  </View>
-                </View>
+            {filteredGroups.map((group) => {
+              const isDueNow = group.nextContribution && new Date(group.nextContribution) < new Date();
+              const currentTurn = group.currentTurn ?? 0;
+              const maxMembers = group.maxMembers ?? 1;
+              const progress = Math.round((currentTurn / maxMembers) * 100);
 
-                <Text style={styles.groupName}>{group.name}</Text>
-                {group.description && (
-                  <Text style={styles.groupDescription} numberOfLines={2}>{group.description}</Text>
-                )}
+              const handleCopyCode = async () => {
+                if (!group.invitationCode) return;
+                Clipboard.setString(group.invitationCode);
+                Alert.alert('Copied', 'Invitation code copied to clipboard');
+              };
 
-                <View style={styles.groupStats}>
-                  <View style={styles.groupStat}>
-                    <Text style={styles.groupStatLabel}>Members</Text>
-                    <Text style={styles.groupStatValue}>
-                      {group.members?.length ?? 0}/{group.maxMembers}
-                    </Text>
-                  </View>
-                  <View style={styles.groupStat}>
-                    <Text style={styles.groupStatLabel}>Contribution</Text>
-                    <Text style={styles.groupStatValue}>{formatCurrency(group.contributionAmount)}</Text>
-                  </View>
-                  <View style={styles.groupStat}>
-                    <Text style={styles.groupStatLabel}>Frequency</Text>
-                    <Text style={styles.groupStatValue}>{group.frequency}</Text>
-                  </View>
-                </View>
+              const handleShare = async () => {
+                if (!group.invitationCode) return;
+                try {
+                  await Share.share({
+                    message: `Join my AjoSave group "${group.name}"!\n\nUse invitation code: ${group.invitationCode}`,
+                  });
+                } catch (err) { /* ignore */ }
+              };
 
-                {group.status === 'active' && group.nextContribution && (
-                  <View style={styles.nextContribution}>
-                    <Ionicons name="calendar-outline" size={14} color={Colors.neutral[500]} />
-                    <Text style={styles.nextContributionText}>
-                      Next: {formatDate(group.nextContribution)}
-                    </Text>
+              return (
+                <Pressable
+                  key={group._id}
+                  style={styles.groupCard}
+                  onPress={() => router.push(`/group-details?id=${group._id}`)}
+                >
+                  {/* Header row */}
+                  <View style={styles.groupHeader}>
+                    <View style={styles.groupIcon}>
+                      <Ionicons name="people" size={24} color={Colors.primary.main} />
+                    </View>
+                    <View style={styles.badgeRow}>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(group.status) + '20' }]}>
+                        <View style={[styles.statusDot, { backgroundColor: getStatusColor(group.status) }]} />
+                        <Text style={[styles.statusText, { color: getStatusColor(group.status) }]}>
+                          {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
+                        </Text>
+                      </View>
+                      {isDueNow && (
+                        <View style={styles.dueNowBadge}>
+                          <Text style={styles.dueNowText}>Due Now</Text>
+                        </View>
+                      )}
+                      {group.credibilityScore !== undefined && group.credibilityScore !== null && (
+                        <View style={styles.credibilityBadge}>
+                          <Ionicons name="star" size={10} color="#f59e0b" />
+                          <Text style={styles.credibilityText}>{group.credibilityScore}%</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
-                )}
-              </Pressable>
-            ))}
+
+                  <Text style={styles.groupName}>{group.name}</Text>
+                  {group.description && (
+                    <Text style={styles.groupDescription} numberOfLines={2}>{group.description}</Text>
+                  )}
+
+                  {/* Stats */}
+                  <View style={styles.groupStats}>
+                    <View style={styles.groupStat}>
+                      <Text style={styles.groupStatLabel}>Members</Text>
+                      <Text style={styles.groupStatValue}>{group.members?.length ?? 0}/{group.maxMembers}</Text>
+                    </View>
+                    <View style={styles.groupStat}>
+                      <Text style={styles.groupStatLabel}>Contribution</Text>
+                      <Text style={styles.groupStatValue}>{formatCurrency(group.contributionAmount)}</Text>
+                    </View>
+                    <View style={styles.groupStat}>
+                      <Text style={styles.groupStatLabel}>Frequency</Text>
+                      <Text style={styles.groupStatValue}>{group.frequency}</Text>
+                    </View>
+                  </View>
+
+                  {/* Progress bar */}
+                  <View style={styles.progressSection}>
+                    <View style={styles.progressHeader}>
+                      <Text style={styles.progressLabel}>Cycle Progress</Text>
+                      <Text style={styles.progressLabel}>{currentTurn}/{maxMembers} turns</Text>
+                    </View>
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressFill, { width: `${progress}%` as any }]} />
+                    </View>
+                  </View>
+
+                  {/* Invitation card */}
+                  {group.invitationCode && (
+                    <View style={styles.inviteCard}>
+                      <Text style={styles.inviteLabel}>Invite Code</Text>
+                      <View style={styles.inviteRow}>
+                        <Text style={styles.inviteCode}>{group.invitationCode}</Text>
+                        <View style={styles.inviteActions}>
+                          <Pressable style={styles.inviteBtn} onPress={handleCopyCode}>
+                            <Ionicons name="copy-outline" size={14} color={Colors.primary.main} />
+                            <Text style={styles.inviteBtnText}>Copy</Text>
+                          </Pressable>
+                          <Pressable style={[styles.inviteBtn, styles.inviteBtnFill]} onPress={handleShare}>
+                            <Ionicons name="share-social-outline" size={14} color="#fff" />
+                            <Text style={[styles.inviteBtnText, { color: '#fff' }]}>Share</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {group.status === 'active' && group.nextContribution && (
+                    <View style={styles.nextContribution}>
+                      <Ionicons name="calendar-outline" size={14} color={Colors.neutral[500]} />
+                      <Text style={styles.nextContributionText}>
+                        Next: {formatDate(group.nextContribution)}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -263,8 +329,37 @@ const styles = StyleSheet.create({
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: 12 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 12, fontFamily: Typography.fontFamily.semibold },
-  groupName: { fontSize: 18, fontFamily: Typography.fontFamily.bold, color: Colors.text.primary.light, marginBottom: Spacing.xs },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' },
+  dueNowBadge: { backgroundColor: '#fee2e2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  dueNowText: { fontSize: 11, fontFamily: Typography.fontFamily.semibold, color: '#dc2626' },
+  credibilityBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#fef9c3', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  credibilityText: { fontSize: 11, fontFamily: Typography.fontFamily.semibold, color: '#92400e' },
+  progressSection: { marginTop: Spacing.sm, marginBottom: Spacing.xs },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  progressLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500] },
+  progressTrack: { height: 6, backgroundColor: Colors.neutral[200], borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: 6, backgroundColor: Colors.primary.main, borderRadius: 3 },
+  inviteCard: {
+    backgroundColor: Colors.primary.main + '10',
+    borderRadius: 10,
+    padding: Spacing.sm,
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary.main + '30',
+  },
+  inviteLabel: { fontSize: 10, fontFamily: Typography.fontFamily.regular, color: Colors.primary.main, marginBottom: 4 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  inviteCode: { fontSize: 18, fontFamily: Typography.fontFamily.bold, color: Colors.primary.main, letterSpacing: 3 },
+  inviteActions: { flexDirection: 'row', gap: 6 },
+  inviteBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    borderWidth: 1, borderColor: Colors.primary.main,
+    paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6,
+  },
+  inviteBtnFill: { backgroundColor: Colors.primary.main },
+  inviteBtnText: { fontSize: 11, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
   groupDescription: { fontSize: 13, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600], marginBottom: Spacing.md },
+  groupName: { fontSize: 18, fontFamily: Typography.fontFamily.bold, color: Colors.text.primary.light, marginBottom: Spacing.xs },
   groupStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',

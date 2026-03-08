@@ -57,6 +57,21 @@ export interface BankAccountVerification {
 }
 
 /**
+ * Lock data structure
+ */
+export interface Lock {
+  _id: string;
+  userId: string;
+  amount: number;
+  label?: string;
+  releaseType: 'date' | 'manual';
+  releaseDate?: string;
+  status: 'active' | 'released';
+  releasedAt?: string;
+  createdAt: string;
+}
+
+/**
  * WalletService class
  */
 class WalletServiceClass {
@@ -193,6 +208,69 @@ class WalletServiceClass {
     }
 
     throw new Error('Failed to verify funding');
+  }
+
+  /**
+   * Withdraw funds to a linked bank account
+   */
+  async withdraw(bankAccountId: string, amount: number): Promise<void> {
+    const response = await ApiService.post<{}>('/wallets/withdraw', { bankAccountId, amount });
+    if (!response.success) throw new Error((response as any).message || 'Withdrawal failed');
+  }
+
+  /**
+   * Save auto-withdrawal settings
+   */
+  async saveAutoWithdrawal(settings: { enabled: boolean; bankAccount: string; percentage: number; minAmount: number }): Promise<void> {
+    const response = await ApiService.post<{}>('/wallets/auto-withdrawal', settings);
+    if (!response.success) throw new Error('Failed to save auto-withdrawal settings');
+  }
+
+  /**
+   * Create a wallet lock
+   */
+  async createLock(amount: number, label: string | undefined, releaseType: 'date' | 'manual', releaseDate?: string): Promise<{
+    lock: Lock;
+    wallet: { availableBalance: number; lockedBalance: number };
+  }> {
+    const response = await ApiService.post<{
+      lock: Lock;
+      wallet: { availableBalance: number; lockedBalance: number };
+    }>('/wallets/locks', { amount, label, releaseType, releaseDate });
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('Failed to create lock');
+  }
+
+  /**
+   * Get user's active locks
+   */
+  async getLocks(): Promise<{ locks: Lock[] }> {
+    const response = await ApiService.get<{ locks: Lock[] }>('/wallets/locks');
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('Failed to get locks');
+  }
+
+  /**
+   * Manually unlock a lock
+   */
+  async unlock(lockId: string): Promise<{
+    lock: Lock;
+    wallet: { availableBalance: number; lockedBalance: number };
+  }> {
+    const response = await ApiService.post<{
+      lock: Lock;
+      wallet: { availableBalance: number; lockedBalance: number };
+    }>(`/wallets/locks/${lockId}/unlock`, {});
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('Failed to unlock');
   }
 }
 

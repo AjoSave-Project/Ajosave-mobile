@@ -19,6 +19,7 @@ import { useGroups } from '@/contexts/GroupsContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { TransactionService } from '@/services/transactionService';
+import { ApiService } from '@/services/apiService';
 import { generatePaymentReference } from '@/utils/payment';
 import { formatCurrency, formatDate } from '@/utils/formatting';
 import type { Group } from '@/services/groupService';
@@ -49,6 +50,16 @@ function PayContent() {
   const selectedGroup = activeGroups.find((g: Group) => g._id === selectedGroupId) ?? null;
   const contributionAmount = selectedGroup?.contributionAmount ?? 0;
   const hasEnoughBalance = (wallet?.availableBalance ?? 0) >= contributionAmount;
+
+  // Turn check: user's membersList entry must have status === 'current'
+  const isMyTurn = (group: Group): boolean => {
+    if (!user || !group.membersList) return false;
+    const member = group.membersList.find(
+      (m: any) => ((m.userId?._id || m.userId) as string)?.toString() === user._id?.toString()
+    );
+    return member?.status === 'current';
+  };
+  const myTurnForSelected = selectedGroup ? isMyTurn(selectedGroup) : true;
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -140,7 +151,32 @@ function PayContent() {
     }
   };
 
-  const canPay = !!selectedGroupId && !isProcessing && (paymentMethod === 'card' ? !!user?.email : true);
+  const handleClaimPayout = async (group: Group) => {
+    Alert.alert(
+      'Claim Payout',
+      `Receive ₦${(group.contributionAmount * group.maxMembers).toLocaleString()} from ${group.name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Claim',
+          onPress: async () => {
+            setIsProcessing(true);
+            try {
+              await ApiService.post('/transactions/payout', { groupId: group._id });
+              await Promise.all([refreshWallet(), fetchGroups()]);
+              Alert.alert('Payout Received', `₦${(group.contributionAmount * group.maxMembers).toLocaleString()} has been credited to your wallet.`);
+            } catch (err: any) {
+              Alert.alert('Failed', err?.message || 'Could not claim payout');
+            } finally {
+              setIsProcessing(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const canPay = !!selectedGroupId && !isProcessing && myTurnForSelected && (paymentMethod === 'card' ? !!user?.email : true);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={[]}>
@@ -181,9 +217,13 @@ function PayContent() {
               <Text style={styles.insufficientText}>Insufficient balance. Fund your wallet first.</Text>
             </View>
           )}
-        </View>
 
-        {/* Group selection */}
+          {selectedGroup && !myTurnForSelected && (
+            <View style={styles.insufficientBanner}>
+              <Ionicons name="time-outline" size={16} color="#f59e0b" />
+              <Text style={styles.insufficientText}>It is not your turn to contribute to this group yet.</Text>
+            </View>
+          )}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Group to Pay</Text>
           {fetchError ? (
@@ -205,6 +245,7 @@ function PayContent() {
             <View style={styles.groupsList}>
               {activeGroups.map((group: Group) => {
                 const isSelected = selectedGroupId === group._id;
+                const myTurn = isMyTurn(group);
                 return (
                   <Pressable
                     key={group._id}
@@ -221,6 +262,23 @@ function PayContent() {
                       </Text>
                       {group.nextContribution && (
                         <Text style={styles.nextDate}>Next: {formatDate(group.nextContribution)}</Text>
+                      )}
+                      <View style={[styles.turnBadge, myTurn ? styles.turnBadgeActive : styles.turnBadgeInactive]}>
+                        <Text style={[styles.turnBadgeText, myTurn ? styles.turnBadgeTextActive : styles.turnBadgeTextInactive]}>
+                          {myTurn ? '✓ Your Turn' : 'Not Your Turn'}
+                        </Text>
+                      </View>
+                      {myTurn && (
+                        <Pressable
+                          style={styles.claimPayoutBtn}
+                          onPress={() => handleClaimPayout(group)}
+                          disabled={isProcessing}
+                        >
+                          <Ionicons name="gift-outline" size={14} color="#fff" />
+                          <Text style={styles.claimPayoutBtnText}>
+                            Claim Payout ₦{(group.contributionAmount * group.maxMembers).toLocaleString()}
+                          </Text>
+                        </Pressable>
                       )}
                     </View>
                     {isSelected && <Text style={styles.checkmark}>✓</Text>}
@@ -421,6 +479,34 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.regular,
     color: Colors.primary.main,
     marginTop: 2,
+  },
+  turnBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  turnBadgeActive: { backgroundColor: '#dcfce7' },
+  turnBadgeInactive: { backgroundColor: '#f3f4f6' },
+  turnBadgeText: { fontSize: 11, fontFamily: Typography.fontFamily.semibold },
+  turnBadgeTextActive: { color: '#16a34a' },
+  turnBadgeTextInactive: { color: '#6b7280' },
+  claimPayoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  claimPayoutBtnText: {
+    fontSize: 11,
+    fontFamily: Typography.fontFamily.semibold,
+    color: '#fff',
   },
   checkmark: {
     fontSize: 22,
