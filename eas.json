@@ -9,7 +9,15 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://ajosave-backend.vercel.app/api",
+        "EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY": "pk_test_ea0d848cec6a2e81e72725d69efed66b8cee91cc",
+        "EXPO_PUBLIC_ENV": "production"
+      }
     },
     "production": {
       "channel": "production"
