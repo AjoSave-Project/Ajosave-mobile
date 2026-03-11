@@ -50,7 +50,7 @@ class ApiServiceClass {
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
   private errorInterceptors: ErrorInterceptor[] = [];
-  private readonly defaultTimeout = 30000; // 30 seconds
+  private readonly defaultTimeout = 60000; // 60 seconds
   private readonly maxRetries = 3;
   private useFallback: boolean = false;
 
