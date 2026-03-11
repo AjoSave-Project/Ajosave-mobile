@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/spacing';
 import { useGroups } from '@/contexts/GroupsContext';
 import { Group } from '@/services/groupService';
 import { formatCurrency } from '@/utils/formatting';
@@ -14,7 +15,7 @@ import GradientButton from '@/components/ui/GradientButton';
  * Join Group Screen
  */
 export default function JoinGroupScreen() {
-  const { findGroupByCode, joinGroup, isLoading } = useGroups();
+  const { findGroupByCode, joinGroup } = useGroups();
 
   const [invitationCode, setInvitationCode] = useState('');
   const [foundGroup, setFoundGroup] = useState<Group | null>(null);
@@ -57,9 +58,9 @@ export default function JoinGroupScreen() {
 
     try {
       setIsJoining(true);
-      await joinGroup(foundGroup._id || foundGroup.id);
+      await joinGroup(foundGroup._id);
       Alert.alert('Success', `You have joined ${foundGroup.name}!`, [
-        { text: 'View Group', onPress: () => router.replace(`/group-details?id=${foundGroup._id || foundGroup.id}`) }
+        { text: 'View Group', onPress: () => router.replace(`/group-details?id=${foundGroup._id}`) }
       ]);
     } catch (err: any) {
       const msg = err.message || 'Failed to join group';
@@ -144,12 +145,12 @@ export default function JoinGroupScreen() {
                   </View>
                   <View style={styles.groupStat}>
                     <Text style={styles.groupStatLabel}>Frequency</Text>
-                    <Text style={styles.groupStatValue}>{foundGroup.contributionFrequency || foundGroup.frequency}</Text>
+                    <Text style={styles.groupStatValue}>{foundGroup.frequency}</Text>
                   </View>
                   <View style={styles.groupStat}>
                     <Text style={styles.groupStatLabel}>Members</Text>
                     <Text style={styles.groupStatValue}>
-                      {foundGroup.currentMembers ?? foundGroup.members?.length ?? 0}/{foundGroup.maxMembers}
+                      {foundGroup.members?.length ?? 0}/{foundGroup.maxMembers}
                     </Text>
                   </View>
                 </View>

@@ -29,10 +29,13 @@ SplashScreen.preventAutoHideAsync();
 
 // Set base URL immediately (synchronous) so it's ready before any provider mounts
 const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+const fallbackUrl = 'https://ajosave-backend.vercel.app/api';
 ApiService.setBaseUrl(apiUrl);
+ApiService.setFallbackUrl(fallbackUrl);
 
 if (__DEV__) {
   console.log(`🌐 API URL: ${apiUrl} [${process.env.EXPO_PUBLIC_ENV || 'development'}]`);
+  console.log(`🌐 Fallback URL: ${fallbackUrl}`);
 }
 
 export default function RootLayout() {

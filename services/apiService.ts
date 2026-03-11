@@ -45,18 +45,27 @@ export type ErrorInterceptor = (error: any) => void;
  */
 class ApiServiceClass {
   private baseUrl: string = '';
+  private fallbackUrl: string = '';
   private authToken: string | null = null;
   private requestInterceptors: RequestInterceptor[] = [];
   private responseInterceptors: ResponseInterceptor[] = [];
   private errorInterceptors: ErrorInterceptor[] = [];
   private readonly defaultTimeout = 30000; // 30 seconds
   private readonly maxRetries = 3;
+  private useFallback: boolean = false;
 
   /**
    * Set the base URL for API requests
    */
   setBaseUrl(url: string): void {
     this.baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+  }
+
+  /**
+   * Set fallback URL for when primary URL fails
+   */
+  setFallbackUrl(url: string): void {
+    this.fallbackUrl = url.endsWith('/') ? url.slice(0, -1) : url;
   }
 
   /**
@@ -156,7 +165,7 @@ class ApiServiceClass {
   }
 
   /**
-   * Core request method with retry logic
+   * Core request method with retry logic and fallback
    */
   private async request<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
@@ -202,6 +211,21 @@ class ApiServiceClass {
 
       return apiResponse;
     } catch (error: any) {
+      // If primary URL timed out and we have a fallback, try fallback
+      if (
+        error.code === 'TIMEOUT_ERROR' &&
+        !this.useFallback &&
+        this.fallbackUrl &&
+        !url.includes(this.fallbackUrl)
+      ) {
+        if (__DEV__) {
+          console.log(`[API] Primary URL timed out, switching to fallback: ${this.fallbackUrl}`);
+        }
+        this.useFallback = true;
+        const fallbackUrl = url.replace(this.baseUrl, this.fallbackUrl);
+        return this.request<T>(method, fallbackUrl, body, 0);
+      }
+
       // Check if we should retry on network failure
       if (this.isNetworkError(error) && retryCount < this.maxRetries) {
         // Exponential backoff: 1s, 2s, 4s
@@ -271,7 +295,8 @@ class ApiServiceClass {
 
       // Handle abort (timeout)
       if (error.name === 'AbortError') {
-        const timeoutError = handleApiError(504, 'Request timed out. Please try again.');
+        const timeoutError = new Error('Request timed out. Please try again.');
+        (timeoutError as any).code = 'TIMEOUT_ERROR';
         throw timeoutError;
       }
 
