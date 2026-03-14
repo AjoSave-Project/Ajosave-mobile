@@ -211,23 +211,23 @@ class ApiServiceClass {
 
       return apiResponse;
     } catch (error: any) {
-      // If primary URL timed out and we have a fallback, try fallback
+      // If primary URL failed (timeout or network error) and we have a fallback, try fallback
       if (
-        error.code === 'TIMEOUT_ERROR' &&
         !this.useFallback &&
         this.fallbackUrl &&
-        !url.includes(this.fallbackUrl)
+        !url.includes(this.fallbackUrl) &&
+        (error.code === 'TIMEOUT_ERROR' || error.code === 'NETWORK_ERROR')
       ) {
         if (__DEV__) {
-          console.log(`[API] Primary URL timed out, switching to fallback: ${this.fallbackUrl}`);
+          console.log(`[API] Primary URL failed (${error.code}), switching to fallback: ${this.fallbackUrl}`);
         }
         this.useFallback = true;
         const fallbackUrl = url.replace(this.baseUrl, this.fallbackUrl);
         return this.request<T>(method, fallbackUrl, body, 0);
       }
 
-      // Check if we should retry on network failure
-      if (this.isNetworkError(error) && retryCount < this.maxRetries) {
+      // Check if we should retry on network failure (only if not already using fallback)
+      if (this.isNetworkError(error) && retryCount < this.maxRetries && !this.useFallback) {
         // Exponential backoff: 1s, 2s, 4s
         const delay = Math.pow(2, retryCount) * 1000;
         await this.sleep(delay);

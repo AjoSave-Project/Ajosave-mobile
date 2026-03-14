@@ -63,8 +63,8 @@ export default function RootLayout() {
         <AuthProvider>
           <WalletProvider>
             <GroupsProvider>
-              <Slot />
               <StatusBar style="auto" />
+              <Slot />
             </GroupsProvider>
           </WalletProvider>
         </AuthProvider>
