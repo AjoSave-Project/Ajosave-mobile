@@ -43,6 +43,11 @@ export default function JoinGroupScreen() {
     try {
       setIsSearching(true);
       setError('');
+      setFoundGroup(null);
+      
+      // Add slight delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       const group = await findGroupByCode(invitationCode);
       setFoundGroup(group);
     } catch (err: any) {
@@ -118,6 +123,15 @@ export default function JoinGroupScreen() {
               </View>
               {error && <Text style={styles.errorText}>{error}</Text>}
             </View>
+
+            {/* Searching State */}
+            {isSearching && (
+              <View style={styles.searchingCard}>
+                <ActivityIndicator size="large" color={Colors.primary.main} />
+                <Text style={styles.searchingText}>Searching for group...</Text>
+                <Text style={styles.searchingSubtext}>Code: {invitationCode}</Text>
+              </View>
+            )}
 
             {/* Found Group Preview */}
             {foundGroup && (
@@ -213,6 +227,26 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   errorText: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: '#ef4444', marginLeft: Spacing.xs },
+  searchingCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary.main + '30',
+    gap: Spacing.sm,
+  },
+  searchingText: {
+    fontSize: 16,
+    fontFamily: Typography.fontFamily.semibold,
+    color: Colors.text.primary.light,
+  },
+  searchingSubtext: {
+    fontSize: 14,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.neutral[500],
+    letterSpacing: 2,
+  },
   groupPreview: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,

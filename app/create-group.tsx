@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
-  ScrollView, Alert, KeyboardAvoidingView, Platform
+  ScrollView, Modal, Alert, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +13,8 @@ import { validateField } from '@/utils/validation';
 import PillButton from '@/components/ui/PillButton';
 import GradientButton from '@/components/ui/GradientButton';
 import ProgressBar from '@/components/ui/ProgressBar';
+import GroupPreviewCard from '@/components/GroupPreviewCard';
+import GroupCreationSuccess from '@/components/GroupCreationSuccess';
 
 const MAX_MEMBERS = ['3 Members', '5 Members', '10 Members', '15 Members', '20 Members', 'Custom'];
 const FREQUENCIES = ['Daily', 'Weekly', 'Bi - Weekly', 'Monthly'];
@@ -26,6 +28,8 @@ const PAYOUT_ORDERS = [
 export default function CreateGroupScreen() {
   const { createGroup, isLoading } = useGroups();
   const [step, setStep] = useState(1);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [createdGroup, setCreatedGroup] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -117,14 +121,8 @@ export default function CreateGroupScreen() {
         payoutOrder: formData.payoutOrder as any,
       });
 
-      Alert.alert(
-        'Group Created!',
-        `Your group has been created.\n\nInvitation Code: ${result.invitationCode}\n\nShare this code with others to join.`,
-        [
-          { text: 'View Group', onPress: () => router.replace(`/group-details?id=${result.group._id}`) },
-          { text: 'Go to Groups', onPress: () => router.replace('/(tabs)/groups') },
-        ]
-      );
+      setCreatedGroup(result);
+      setShowSuccess(true);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to create group');
     }
@@ -255,6 +253,18 @@ export default function CreateGroupScreen() {
           {/* Step 2: Contribution Rules */}
           {step === 2 && (
             <>
+              {/* Preview Card */}
+              {formData.name && formData.contributionAmount && formData.maxMembers && (
+                <GroupPreviewCard
+                  name={formData.name}
+                  contributionAmount={formData.contributionAmount}
+                  frequency={formData.frequency}
+                  maxMembers={showCustomMaxMembers ? formData.customMaxMembers : formData.maxMembers}
+                  duration={showCustomDuration ? formData.customDuration : formData.duration.split(' ')[0]}
+                  payoutOrder={formData.payoutOrder}
+                />
+              )}
+
               <View style={styles.field}>
                 <Text style={styles.label}>Contribution Amount (₦)</Text>
                 <View style={styles.amountInputContainer}>
@@ -376,6 +386,27 @@ export default function CreateGroupScreen() {
           </View>
         )}
       </View>
+
+      {/* Success Modal */}
+      {showSuccess && createdGroup && (
+        <Modal visible={showSuccess} animationType="fade" transparent>
+          <GroupCreationSuccess
+            groupName={createdGroup.group.name}
+            invitationCode={createdGroup.invitationCode}
+            contributionAmount={createdGroup.group.contributionAmount}
+            maxMembers={createdGroup.group.maxMembers}
+            frequency={createdGroup.group.frequency}
+            onViewGroup={() => {
+              setShowSuccess(false);
+              router.replace(`/group-details?id=${createdGroup.group._id}`);
+            }}
+            onGoToGroups={() => {
+              setShowSuccess(false);
+              router.replace('/(tabs)/groups');
+            }}
+          />
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }

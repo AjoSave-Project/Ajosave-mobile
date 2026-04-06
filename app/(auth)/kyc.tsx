@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
-  ScrollView, ActivityIndicator
+  ScrollView, ActivityIndicator, Modal, Animated
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,34 @@ export default function KYCScreen() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verifyStep, setVerifyStep] = useState(0);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const dotAnim = useRef(new Animated.Value(0)).current;
+
+  const verifySteps = [
+    'Validating BVN...',
+    'Validating NIN...',
+    'Cross-checking identity...',
+    'Finalising verification...',
+  ];
+
+  useEffect(() => {
+    if (verifying) {
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(dotAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(dotAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    } else {
+      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+    }
+  }, [verifying]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -44,6 +72,14 @@ export default function KYCScreen() {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
     setSubmitError('');
+
+    // Simulate step-by-step verification before actual API call
+    setVerifying(true);
+    setVerifyStep(0);
+    for (let i = 0; i < verifySteps.length; i++) {
+      setVerifyStep(i);
+      await new Promise(res => setTimeout(res, 900));
+    }
 
     try {
       const result = await signup({
@@ -65,6 +101,7 @@ export default function KYCScreen() {
         router.replace('/(auth)/setup-biometric');
       }
     } catch (error: any) {
+      setVerifying(false);
       const fieldErrors = extractFieldErrors(error);
       if (Object.keys(fieldErrors).length > 0) {
         setErrors(prev => ({ ...prev, ...fieldErrors }));
@@ -74,6 +111,7 @@ export default function KYCScreen() {
   };
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
@@ -162,6 +200,26 @@ export default function KYCScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Verification overlay */}
+      <Modal transparent visible={verifying} animationType="none">
+        <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+          <View style={styles.verifyCard}>
+            <ActivityIndicator size="large" color={Colors.primary.main} style={{ marginBottom: 20 }} />
+            <Text style={styles.verifyTitle}>Verifying Identity</Text>
+            <Text style={styles.verifyStep}>{verifySteps[verifyStep]}</Text>
+            <View style={styles.stepDots}>
+              {verifySteps.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.dot, i <= verifyStep && styles.dotActive]}
+                />
+              ))}
+            </View>
+          </View>
+        </Animated.View>
+      </Modal>
+    </>
   );
 }
 
@@ -209,4 +267,11 @@ const styles = StyleSheet.create({
   arrow: { color: '#FFFFFF', fontSize: 24, fontFamily: Typography.fontFamily.regular },
   errorBanner: { backgroundColor: '#fee2e2', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.md, borderLeftWidth: 4, borderLeftColor: '#ef4444' },
   errorBannerText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: '#b91c1c' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
+  verifyCard: { backgroundColor: '#fff', borderRadius: 20, padding: 36, alignItems: 'center', width: '78%', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 12 },
+  verifyTitle: { fontSize: 18, fontFamily: Typography.fontFamily.bold, color: Colors.primary.main, marginBottom: 8 },
+  verifyStep: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600], marginBottom: 20, textAlign: 'center' },
+  stepDots: { flexDirection: 'row', gap: 8 },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.neutral[300] },
+  dotActive: { backgroundColor: Colors.primary.main },
 });

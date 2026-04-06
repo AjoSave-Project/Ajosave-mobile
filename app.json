@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "AjosaveMobile",
-    "slug": "ajosave",
-    "owner": "ajosave-project",
-    "version": "1.0.0",
+    "slug": "AjosaveMobile",
+    "owner": "ajosave",
+    "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/logo.jpg",
     "scheme": "ajosavemobile",
@@ -58,7 +58,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "17d0400d-9bd8-43f8-b191-aac51bf0450b"
+        "projectId": "43b6b668-f243-4904-8bd2-696e8bc6c55d"
       }
     },
     "runtimeVersion": {

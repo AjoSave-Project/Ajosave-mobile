@@ -57,7 +57,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#FFFFFF',
+        tabBarActiveTintColor: '#ffffffff',
         tabBarInactiveTintColor: Colors.neutral[400],
         headerShown: true,
         tabBarButton: HapticTab,
@@ -114,9 +114,9 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: Colors.neutral[200],
+    borderTopColor: Colors.primary.light,
     paddingTop: 8,
     height: 65,
   },

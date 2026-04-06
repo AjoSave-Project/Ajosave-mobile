@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TransactionService, Transaction } from '@/services/transactionService';
 import { formatCurrency, formatDate } from '@/utils/formatting';
 import { useWallet } from '@/contexts/WalletContext';
+import GroupMilestones from '@/components/GroupMilestones';
 
 type Tab = 'overview' | 'members' | 'history';
 
@@ -318,6 +319,14 @@ export default function GroupDetailsScreen() {
                     {group.maxMembers - (group.currentTurn ?? 0)} turns remaining
                   </Text>
                 </View>
+
+                {/* Milestones */}
+                <GroupMilestones
+                  currentTurn={group.currentTurn ?? 0}
+                  maxMembers={group.maxMembers}
+                  membersJoined={group.members?.length ?? 0}
+                  status={group.status}
+                />
 
                 {/* Quick Actions */}
                 {group.status === 'active' && (

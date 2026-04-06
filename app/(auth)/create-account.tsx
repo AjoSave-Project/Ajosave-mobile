@@ -33,8 +33,10 @@ export default function CreateAccountScreen() {
     if (!formData.firstName.trim()) e.firstName = 'First name is required';
     if (!formData.lastName.trim()) e.lastName = 'Last name is required';
     if (!formData.email.trim()) e.email = 'Email is required';
+    else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(formData.email)) e.email = 'Please enter a valid email address';
     if (!formData.phoneNumber.trim()) e.phoneNumber = 'Phone number is required';
     if (formData.password.length < 8) e.password = 'Password must be at least 8 characters';
+    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) e.password = 'Password must contain uppercase, lowercase, and a number';
     return e;
   };
 
@@ -88,7 +90,7 @@ export default function CreateAccountScreen() {
                   <TextInput style={[styles.input, errors.lastName && styles.inputError]} placeholder="Enter your last name" placeholderTextColor={Colors.neutral[500]} value={formData.lastName} onChangeText={v => update('lastName', v)} />
                 </Field>
 
-                <Field label="Email Address" error={errors.email}>
+                <Field label="Email Address" error={errors.email} hint="e.g. yourname@example.com">
                   <TextInput style={[styles.input, errors.email && styles.inputError]} placeholder="Enter your email" placeholderTextColor={Colors.neutral[500]} value={formData.email} onChangeText={v => update('email', v)} keyboardType="email-address" autoCapitalize="none" />
                 </Field>
 
@@ -98,7 +100,7 @@ export default function CreateAccountScreen() {
                   error={errors.phoneNumber}
                 />
 
-                <Field label="Password" error={errors.password}>
+                <Field label="Password" error={errors.password} hint="Min 8 chars with uppercase, lowercase, and number">
                   <View style={[styles.passwordContainer, errors.password && styles.inputError]}>
                     <TextInput style={styles.passwordInput} placeholder="Min 8 characters" placeholderTextColor={Colors.neutral[500]} value={formData.password} onChangeText={v => update('password', v)} secureTextEntry={!showPassword} />
                     <Pressable onPress={() => setShowPassword(!showPassword)}>
@@ -130,12 +132,12 @@ export default function CreateAccountScreen() {
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({ label, error, hint, children }: { label: string; error?: string; hint?: string; children: React.ReactNode }) {
   return (
     <View style={{ gap: 4 }}>
       <Text style={fieldStyles.label}>{label}</Text>
       {children}
-      {error && <Text style={fieldStyles.error}>{error}</Text>}
+      {error ? <Text style={fieldStyles.error}>{error}</Text> : hint ? <Text style={fieldStyles.hint}>{hint}</Text> : null}
     </View>
   );
 }
@@ -143,6 +145,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 const fieldStyles = StyleSheet.create({
   label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[400], marginLeft: Spacing.md },
   error: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: '#ef4444', marginLeft: Spacing.xs },
+  hint: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], marginLeft: Spacing.xs },
 });
 
 const AVATAR_SIZE = 90;
