@@ -13,19 +13,16 @@
  * - Slot: Expo Router navigation slot (renders active route)
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
 import { ThemeProvider, AuthProvider, WalletProvider, GroupsProvider } from '@/contexts';
 import { ErrorBoundary } from '@/components';
+import SplashScreenComponent from '@/components/SplashScreen';
 import { ApiService } from '@/services/apiService';
-
-// Prevent splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
 
 // Set base URL immediately (synchronous) so it's ready before any provider mounts
 const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -46,15 +43,20 @@ export default function RootLayout() {
     'Gilroy-Bold': require('@/assets/fonts/Gilroy-Bold.ttf'),
   });
 
-  // Hide splash screen when fonts are loaded
+  const [showSplash, setShowSplash] = useState(true);
+
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      // Keep splash screen visible for 3 seconds
+      const timer = setTimeout(() => {
+        setShowSplash(false);
+      }, 3000);
+      return () => clearTimeout(timer);
     }
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) {
-    return null;
+  if (!fontsLoaded || showSplash) {
+    return <SplashScreenComponent />;
   }
   
   return (

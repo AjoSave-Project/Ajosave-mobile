@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatCurrency, formatDate } from '@/utils/formatting';
 
 export default function HomeScreen() {
+  const { width } = useWindowDimensions();
   const { wallet, transactions, isLoading, error, fetchWallet, fetchTransactions, refreshWallet } = useWallet();
   const { groups, fetchGroups, refreshGroups } = useGroups();
   const [refreshing, setRefreshing] = useState(false);
@@ -111,21 +112,26 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* 4-stat grid */}
-          <View style={styles.balanceStats}>
+          {/* 4-stat grid - responsive layout */}
+          <View style={[styles.balanceStats, { flexWrap: 'wrap' }]}>
             {[
               { label: 'Available', value: wallet?.availableBalance ?? 0 },
               { label: 'Locked', value: wallet?.lockedBalance ?? 0 },
               { label: 'Contributed', value: wallet?.totalContributions ?? 0 },
               { label: 'Received', value: wallet?.totalPayouts ?? 0 },
-            ].map((stat, i) => (
-              <View key={stat.label} style={[styles.balanceStat, i % 2 === 0 && styles.balanceStatLeft]}>
-                <Text style={styles.balanceStatLabel}>{stat.label}</Text>
-                <Text style={styles.balanceStatValue}>
-                  {balanceVisible ? formatCurrency(stat.value) : '*****'}
-                </Text>
-              </View>
-            ))}
+            ].map((stat, i) => {
+              const isSmallScreen = width < 360;
+              const statsPerRow = isSmallScreen ? 2 : 4;
+              const statWidth = isSmallScreen ? '50%' : '25%';
+              return (
+                <View key={stat.label} style={[styles.balanceStat, { width: statWidth }]}>
+                  <Text style={styles.balanceStatLabel}>{stat.label}</Text>
+                  <Text style={styles.balanceStatValue} numberOfLines={1}>
+                    {balanceVisible ? formatCurrency(stat.value) : '*****'}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
 
           {/* Next payout row */}
@@ -182,15 +188,22 @@ export default function HomeScreen() {
         {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionGrid}>
-            {quickActions.map((action) => (
-              <Pressable key={action.label} style={styles.actionButton} onPress={action.onPress}>
-                <View style={styles.actionIconContainer}>
-                  <Ionicons name={action.icon as any} size={22} color={Colors.primary.main} />
-                </View>
-                <Text style={styles.actionButtonText}>{action.label}</Text>
-              </Pressable>
-            ))}
+          <View style={[styles.actionGrid, { gap: width < 360 ? Spacing.xs : Spacing.sm }]}>
+            {quickActions.map((action) => {
+              const itemWidth = (width - (Spacing.lg * 2) - (Spacing.sm * 3)) / 4;
+              return (
+                <Pressable 
+                  key={action.label} 
+                  style={[styles.actionButton, { width: itemWidth }]} 
+                  onPress={action.onPress}
+                >
+                  <View style={styles.actionIconContainer}>
+                    <Ionicons name={action.icon as any} size={22} color={Colors.primary.main} />
+                  </View>
+                  <Text style={styles.actionButtonText} numberOfLines={2}>{action.label}</Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
@@ -228,13 +241,13 @@ export default function HomeScreen() {
                     <Ionicons name="people" size={22} color={Colors.primary.main} />
                   </View>
                   <View style={styles.groupInfo}>
-                    <Text style={styles.groupName}>{group.name}</Text>
-                    <Text style={styles.groupMeta}>
+                    <Text style={styles.groupName} numberOfLines={1}>{group.name}</Text>
+                    <Text style={styles.groupMeta} numberOfLines={1}>
                       {group.members?.length ?? 0}/{group.maxMembers} members · {formatCurrency(group.contributionAmount)}/{group.frequency}
                     </Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(group.status) + '20' }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(group.status) }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(group.status) }]} numberOfLines={1}>
                       {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
                     </Text>
                   </View>
@@ -272,10 +285,10 @@ export default function HomeScreen() {
                     />
                   </View>
                   <View style={styles.txInfo}>
-                    <Text style={styles.txType}>{tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}</Text>
-                    <Text style={styles.txDate}>{formatDate(tx.createdAt)}</Text>
+                    <Text style={styles.txType} numberOfLines={1}>{tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}</Text>
+                    <Text style={styles.txDate} numberOfLines={1}>{formatDate(tx.createdAt)}</Text>
                   </View>
-                  <Text style={[styles.txAmount, { color: getTransactionColor(tx.type) }]}>
+                  <Text style={[styles.txAmount, { color: getTransactionColor(tx.type) }]} numberOfLines={1}>
                     {tx.type === 'payout' ? '+' : '-'}{formatCurrency(tx.amount)}
                   </Text>
                 </View>
@@ -312,8 +325,7 @@ const styles = StyleSheet.create({
   activeGroupsCount: { fontSize: 28, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF', textAlign: 'right' },
   pendingGroupsText: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
   balanceStats: { flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: Spacing.md, gap: 0 },
-  balanceStat: { width: '50%', paddingVertical: 4, paddingRight: Spacing.sm },
-  balanceStatLeft: { paddingRight: Spacing.md },
+  balanceStat: { paddingVertical: 4, paddingRight: Spacing.sm },
   balanceStatLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.7)', marginBottom: 2 },
   balanceStatValue: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
   nextPayoutRow: {
@@ -369,9 +381,8 @@ const styles = StyleSheet.create({
   viewAllText: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
 
   // Quick Actions
-  actionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  actionGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   actionButton: {
-    width: '23%',
     backgroundColor: '#FFFFFF',
     paddingVertical: Spacing.md,
     paddingHorizontal: 4,

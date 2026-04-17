@@ -2,40 +2,37 @@
   "expo": {
     "name": "AjosaveMobile",
     "slug": "AjosaveMobile",
-    "owner": "ajosave",
     "version": "3.2.1",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.jpg",
+    "icon": "./assets/images/favicon.png",
     "scheme": "ajosavemobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/logo.jpg"
+        "foregroundImage": "./assets/images/favicon.png"
       },
       "softwareKeyboardLayoutMode": "pan",
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.ajosave.AjosaveMobile"
     },
     "web": {
-      "favicon": "./assets/images/favicon.jpg"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/favicon.jpg",
+          "image": "./assets/images/splash-screen.png",
           "imageWidth": 200,
+          "backgroundColor": "#F5F5F5",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#F5F5F5"
           }
         }
       ],
@@ -58,14 +55,11 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "43b6b668-f243-4904-8bd2-696e8bc6c55d"
+        "projectId": "8599fb1d-3b49-4772-af40-76d53a30ac63"
       }
     },
     "runtimeVersion": {
       "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/43b6b668-f243-4904-8bd2-696e8bc6c55d"
     }
   }
 }

@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, ActivityIndicator, TextInput, Modal, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, ActivityIndicator, TextInput, Modal, Alert, Share, KeyboardAvoidingView, Platform } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
@@ -16,6 +16,7 @@ import { ApiService } from '@/services/apiService';
 const PAYSTACK_KEY = process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
 
 function WalletContent() {
+  const insets = useSafeAreaInsets();
   const { wallet, transactions, locks, isLoading, error, fetchWallet, fetchTransactions, refreshWallet, fetchLocks } = useWallet();
   const { user } = useAuth();
   const { popup } = usePaystack();
@@ -495,14 +496,14 @@ function WalletContent() {
                     <Ionicons name={getTransactionIcon(tx.type)} size={22} color={getTransactionColor(tx.type)} />
                   </View>
                   <View style={styles.txInfo}>
-                    <Text style={styles.txTitle}>
+                    <Text style={styles.txTitle} numberOfLines={1}>
                       {tx.type === 'fund_wallet' ? 'Fund Wallet' : tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}
                     </Text>
                     {tx.description ? <Text style={styles.txDesc} numberOfLines={1}>{tx.description}</Text> : null}
-                    <Text style={styles.txDate}>{formatDate(tx.createdAt)}</Text>
+                    <Text style={styles.txDate} numberOfLines={1}>{formatDate(tx.createdAt)}</Text>
                   </View>
                   <View style={styles.txRight}>
-                    <Text style={[styles.txAmount, { color: getTransactionColor(tx.type) }]}>
+                    <Text style={[styles.txAmount, { color: getTransactionColor(tx.type) }]} numberOfLines={1}>
                       {tx.type === 'payout' || tx.type === 'fund_wallet' ? '+' : '-'}{formatCurrency(tx.amount)}
                     </Text>
                     <View style={[
@@ -511,7 +512,7 @@ function WalletContent() {
                       tx.status === 'pending' && styles.statusPending,
                       tx.status === 'failed' && styles.statusFailed,
                     ]}>
-                      <Text style={styles.statusText}>{tx.status}</Text>
+                      <Text style={styles.statusText} numberOfLines={1}>{tx.status}</Text>
                     </View>
                   </View>
                 </View>
@@ -523,171 +524,190 @@ function WalletContent() {
 
       {/* ── Fund Modal ────────────────────────────────────────────── */}
       <Modal visible={showFundModal} transparent animationType="slide" onRequestClose={() => setShowFundModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setShowFundModal(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Fund Wallet</Text>
-            <Text style={styles.sheetSubtitle}>Enter the amount you want to add</Text>
-            <View style={styles.amountRow}>
-              <Text style={styles.currencySymbol}>₦</Text>
-              <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
-                placeholderTextColor={Colors.neutral[400]}
-                value={fundAmount}
-                onChangeText={setFundAmount}
-                keyboardType="decimal-pad"
-                autoFocus
-              />
-            </View>
-            <View style={styles.quickAmounts}>
-              {[1000, 2000, 5000, 10000].map(amt => (
-                <Pressable key={amt} style={styles.quickChip} onPress={() => setFundAmount(String(amt))}>
-                  <Text style={styles.quickChipText}>₦{amt.toLocaleString()}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <Pressable
-              style={[styles.primaryBtn, (!fundAmount || parseFloat(fundAmount) < 100) && styles.primaryBtnDisabled]}
-              onPress={handleFundWallet}
-              disabled={!fundAmount || parseFloat(fundAmount) < 100}
-            >
-              <Text style={styles.primaryBtnText}>Proceed to Payment</Text>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <Pressable style={styles.overlay} onPress={() => setShowFundModal(false)}>
+            <Pressable style={[styles.sheet, { paddingBottom: insets.bottom || Spacing.lg }]} onPress={() => {}}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>Fund Wallet</Text>
+              <Text style={styles.sheetSubtitle}>Enter the amount you want to add</Text>
+              <View style={styles.amountRow}>
+                <Text style={styles.currencySymbol}>₦</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor={Colors.neutral[400]}
+                  value={fundAmount}
+                  onChangeText={setFundAmount}
+                  keyboardType="decimal-pad"
+                  autoFocus
+                />
+              </View>
+              <View style={styles.quickAmounts}>
+                {[1000, 2000, 5000, 10000].map(amt => (
+                  <Pressable key={amt} style={styles.quickChip} onPress={() => setFundAmount(String(amt))}>
+                    <Text style={styles.quickChipText}>₦{amt.toLocaleString()}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable
+                style={[styles.primaryBtn, (!fundAmount || parseFloat(fundAmount) < 100) && styles.primaryBtnDisabled]}
+                onPress={handleFundWallet}
+                disabled={!fundAmount || parseFloat(fundAmount) < 100}
+              >
+                <Text style={styles.primaryBtnText}>Proceed to Payment</Text>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── Withdraw Modal ────────────────────────────────────────── */}
       <Modal visible={showWithdrawModal} transparent animationType="slide" onRequestClose={() => setShowWithdrawModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setShowWithdrawModal(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Withdraw Funds</Text>
-            {withdrawError ? <Text style={styles.formError}>{withdrawError}</Text> : null}
-            <Text style={styles.fieldLabel}>Select bank account</Text>
-            {bankAccounts.length === 0 ? (
-              <Text style={styles.emptyHint}>No bank accounts linked. Add one first.</Text>
-            ) : (
-              <View style={styles.bankSelectList}>
-                {bankAccounts.map(acc => (
-                  <Pressable
-                    key={acc._id}
-                    style={[styles.bankSelectRow, withdrawForm.bankAccountId === acc._id && styles.bankSelectRowActive]}
-                    onPress={() => setWithdrawForm(p => ({ ...p, bankAccountId: acc._id }))}
-                  >
-                    <View style={styles.bankSelectLeft}>
-                      <Ionicons
-                        name={withdrawForm.bankAccountId === acc._id ? 'radio-button-on' : 'radio-button-off'}
-                        size={18}
-                        color={withdrawForm.bankAccountId === acc._id ? Colors.primary.main : Colors.neutral[400]}
-                      />
-                      <Text style={[styles.bankSelectText, withdrawForm.bankAccountId === acc._id && { color: Colors.primary.main }]}>
-                        {acc.bankName} ****{acc.accountNumber.slice(-4)}{acc.isPrimary ? ' (Primary)' : ''}
-                      </Text>
-                    </View>
-                    {withdrawForm.bankAccountId === acc._id && (
-                      <Ionicons name="checkmark-circle" size={18} color={Colors.primary.main} />
-                    )}
-                  </Pressable>
-                ))}
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <Pressable style={styles.overlay} onPress={() => setShowWithdrawModal(false)}>
+            <Pressable style={[styles.sheet, { paddingBottom: insets.bottom || Spacing.lg }]} onPress={() => {}}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>Withdraw Funds</Text>
+              {withdrawError ? <Text style={styles.formError}>{withdrawError}</Text> : null}
+              <Text style={styles.fieldLabel}>Select bank account</Text>
+              {bankAccounts.length === 0 ? (
+                <Text style={styles.emptyHint}>No bank accounts linked. Add one first.</Text>
+              ) : (
+                <View style={styles.bankSelectList}>
+                  {bankAccounts.map(acc => (
+                    <Pressable
+                      key={acc._id}
+                      style={[styles.bankSelectRow, withdrawForm.bankAccountId === acc._id && styles.bankSelectRowActive]}
+                      onPress={() => setWithdrawForm(p => ({ ...p, bankAccountId: acc._id }))}
+                    >
+                      <View style={styles.bankSelectLeft}>
+                        <Ionicons
+                          name={withdrawForm.bankAccountId === acc._id ? 'radio-button-on' : 'radio-button-off'}
+                          size={18}
+                          color={withdrawForm.bankAccountId === acc._id ? Colors.primary.main : Colors.neutral[400]}
+                        />
+                        <Text style={[styles.bankSelectText, withdrawForm.bankAccountId === acc._id && { color: Colors.primary.main }]}>
+                          {acc.bankName} ****{acc.accountNumber.slice(-4)}{acc.isPrimary ? ' (Primary)' : ''}
+                        </Text>
+                      </View>
+                      {withdrawForm.bankAccountId === acc._id && (
+                        <Ionicons name="checkmark-circle" size={18} color={Colors.primary.main} />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+              <View style={styles.amountRow}>
+                <Text style={styles.currencySymbol}>₦</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  placeholder="0.00"
+                  placeholderTextColor={Colors.neutral[400]}
+                  value={withdrawForm.amount}
+                  onChangeText={v => setWithdrawForm(p => ({ ...p, amount: v }))}
+                  keyboardType="decimal-pad"
+                />
               </View>
-            )}
-            <View style={styles.amountRow}>
-              <Text style={styles.currencySymbol}>₦</Text>
-              <TextInput
-                style={styles.amountInput}
-                placeholder="0.00"
-                placeholderTextColor={Colors.neutral[400]}
-                value={withdrawForm.amount}
-                onChangeText={v => setWithdrawForm(p => ({ ...p, amount: v }))}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            {wallet && <Text style={styles.balanceHint}>Available: {formatCurrency(wallet.availableBalance)}</Text>}
-            <Pressable
-              style={[styles.primaryBtn, withdrawing && { opacity: 0.6 }]}
-              onPress={handleWithdraw}
-              disabled={withdrawing}
-            >
-              <Text style={styles.primaryBtnText}>{withdrawing ? 'Processing...' : 'Withdraw'}</Text>
+              {wallet && <Text style={styles.balanceHint}>Available: {formatCurrency(wallet.availableBalance)}</Text>}
+              <Pressable
+                style={[styles.primaryBtn, withdrawing && { opacity: 0.6 }]}
+                onPress={handleWithdraw}
+                disabled={withdrawing}
+              >
+                <Text style={styles.primaryBtnText}>{withdrawing ? 'Processing...' : 'Withdraw'}</Text>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── Auto-Withdrawal Modal ─────────────────────────────────── */}
       <Modal visible={showAutoWithdrawalModal} transparent animationType="slide" onRequestClose={() => setShowAutoWithdrawalModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setShowAutoWithdrawalModal(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Auto-Withdrawal</Text>
-            <Text style={styles.sheetSubtitle}>Automatically withdraw payouts to your bank</Text>
-            {autoError ? <Text style={styles.formError}>{autoError}</Text> : null}
-            <Text style={styles.fieldLabel}>Bank Account</Text>
-            {bankAccounts.length === 0 ? (
-              <Text style={styles.emptyHint}>No bank accounts linked.</Text>
-            ) : (
-              <View style={styles.bankSelectList}>
-                {bankAccounts.map(acc => (
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <Pressable style={styles.overlay} onPress={() => setShowAutoWithdrawalModal(false)}>
+            <Pressable style={[styles.sheet, { paddingBottom: insets.bottom || Spacing.lg }]} onPress={() => {}}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>Auto-Withdrawal</Text>
+              <Text style={styles.sheetSubtitle}>Automatically withdraw payouts to your bank</Text>
+              {autoError ? <Text style={styles.formError}>{autoError}</Text> : null}
+              <Text style={styles.fieldLabel}>Bank Account</Text>
+              {bankAccounts.length === 0 ? (
+                <Text style={styles.emptyHint}>No bank accounts linked.</Text>
+              ) : (
+                <View style={styles.bankSelectList}>
+                  {bankAccounts.map(acc => (
+                    <Pressable
+                      key={acc._id}
+                      style={[styles.bankSelectRow, autoSettings.bankAccount === acc._id && styles.bankSelectRowActive]}
+                      onPress={() => setAutoSettings(p => ({ ...p, bankAccount: acc._id }))}
+                    >
+                      <View style={styles.bankSelectLeft}>
+                        <Ionicons
+                          name={autoSettings.bankAccount === acc._id ? 'radio-button-on' : 'radio-button-off'}
+                          size={18}
+                          color={autoSettings.bankAccount === acc._id ? Colors.primary.main : Colors.neutral[400]}
+                        />
+                        <Text style={[styles.bankSelectText, autoSettings.bankAccount === acc._id && { color: Colors.primary.main }]}>
+                          {acc.bankName} ****{acc.accountNumber.slice(-4)}
+                        </Text>
+                      </View>
+                      {autoSettings.bankAccount === acc._id && (
+                        <Ionicons name="checkmark-circle" size={18} color={Colors.primary.main} />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+              <Text style={styles.fieldLabel}>Percentage: {autoSettings.percentage}%</Text>
+              <View style={styles.quickAmounts}>
+                {[25, 50, 75, 100].map(p => (
                   <Pressable
-                    key={acc._id}
-                    style={[styles.bankSelectRow, autoSettings.bankAccount === acc._id && styles.bankSelectRowActive]}
-                    onPress={() => setAutoSettings(p => ({ ...p, bankAccount: acc._id }))}
+                    key={p}
+                    style={[styles.quickChip, autoSettings.percentage === p && styles.quickChipActive]}
+                    onPress={() => setAutoSettings(prev => ({ ...prev, percentage: p }))}
                   >
-                    <View style={styles.bankSelectLeft}>
-                      <Ionicons
-                        name={autoSettings.bankAccount === acc._id ? 'radio-button-on' : 'radio-button-off'}
-                        size={18}
-                        color={autoSettings.bankAccount === acc._id ? Colors.primary.main : Colors.neutral[400]}
-                      />
-                      <Text style={[styles.bankSelectText, autoSettings.bankAccount === acc._id && { color: Colors.primary.main }]}>
-                        {acc.bankName} ****{acc.accountNumber.slice(-4)}
-                      </Text>
-                    </View>
-                    {autoSettings.bankAccount === acc._id && (
-                      <Ionicons name="checkmark-circle" size={18} color={Colors.primary.main} />
-                    )}
+                    <Text style={[styles.quickChipText, autoSettings.percentage === p && styles.quickChipTextActive]}>{p}%</Text>
                   </Pressable>
                 ))}
               </View>
-            )}
-            <Text style={styles.fieldLabel}>Percentage: {autoSettings.percentage}%</Text>
-            <View style={styles.quickAmounts}>
-              {[25, 50, 75, 100].map(p => (
-                <Pressable
-                  key={p}
-                  style={[styles.quickChip, autoSettings.percentage === p && styles.quickChipActive]}
-                  onPress={() => setAutoSettings(prev => ({ ...prev, percentage: p }))}
-                >
-                  <Text style={[styles.quickChipText, autoSettings.percentage === p && styles.quickChipTextActive]}>{p}%</Text>
-                </Pressable>
-              ))}
-            </View>
-            <Pressable
-              style={[styles.toggleRow]}
-              onPress={() => setAutoSettings(p => ({ ...p, enabled: !p.enabled }))}
-            >
-              <Ionicons name={autoSettings.enabled ? 'checkbox' : 'square-outline'} size={22} color={Colors.primary.main} />
-              <Text style={styles.toggleText}>Enable Auto-Withdrawal</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.primaryBtn, savingAuto && { opacity: 0.6 }]}
-              onPress={handleSaveAutoWithdrawal}
-              disabled={savingAuto}
-            >
-              <Text style={styles.primaryBtnText}>{savingAuto ? 'Saving...' : 'Save Settings'}</Text>
+              <Pressable
+                style={[styles.toggleRow]}
+                onPress={() => setAutoSettings(p => ({ ...p, enabled: !p.enabled }))}
+              >
+                <Ionicons name={autoSettings.enabled ? 'checkbox' : 'square-outline'} size={22} color={Colors.primary.main} />
+                <Text style={styles.toggleText}>Enable Auto-Withdrawal</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.primaryBtn, savingAuto && { opacity: 0.6 }]}
+                onPress={handleSaveAutoWithdrawal}
+                disabled={savingAuto}
+              >
+                <Text style={styles.primaryBtnText}>{savingAuto ? 'Saving...' : 'Save Settings'}</Text>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── Lock Funds Modal ──────────────────────────────────────── */}
       <Modal visible={showLockModal} transparent animationType="slide" onRequestClose={() => setShowLockModal(false)}>
-        <Pressable style={styles.overlay} onPress={() => setShowLockModal(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Lock Funds</Text>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <Pressable style={styles.overlay} onPress={() => setShowLockModal(false)}>
+            <Pressable style={[styles.sheet, { paddingBottom: insets.bottom || Spacing.lg }]} onPress={() => {}}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>Lock Funds</Text>
             <Text style={styles.sheetSubtitle}>Protect savings from being spent</Text>
             {lockError ? <Text style={styles.formError}>{lockError}</Text> : null}
             <View style={styles.amountRow}>
@@ -737,8 +757,9 @@ function WalletContent() {
             >
               <Text style={styles.primaryBtnText}>{locking ? 'Locking...' : 'Lock Funds'}</Text>
             </Pressable>
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

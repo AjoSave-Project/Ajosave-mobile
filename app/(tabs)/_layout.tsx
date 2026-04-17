@@ -54,6 +54,11 @@ export default function TabLayout() {
   // Don't render tabs until auth state is known
   if (isLoading || !isAuthenticated) return null;
 
+  // Calculate proper padding for Android navigation bar
+  // Android gesture navigation: ~16-20dp, Android buttons: ~48dp
+  const bottomPadding = Math.max(insets.bottom, 16);
+  const tabBarHeight = 65 + bottomPadding;
+
   return (
     <Tabs
       screenOptions={{
@@ -63,8 +68,8 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarStyle: {
           ...styles.tabBar,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : Spacing.sm,
-          height: 60 + (insets.bottom > 0 ? insets.bottom : Spacing.lg),
+          paddingBottom: bottomPadding,
+          height: tabBarHeight,
         },
         tabBarLabelStyle: styles.tabBarLabel,
       }}>
