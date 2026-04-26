@@ -13,7 +13,7 @@ import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { extractFieldErrors, getErrorMessage } from '@/utils/errors';
 import DateOfBirthInput from '@/components/DateOfBirthInput';
 
-export default function KYCScreen() {
+export default function KYCVerifyScreen() {
   const { signup, isLoading } = useAuth();
   const keyboardVisible = useKeyboardVisible();
 
@@ -26,6 +26,7 @@ export default function KYCScreen() {
     password: string;
   }>();
 
+  const [step, setStep] = useState(1); // Step 1: BVN, Step 2: NIN + DOB
   const [bvn, setBvn] = useState('');
   const [nin, setNin] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -35,7 +36,6 @@ export default function KYCScreen() {
   const [verifyStep, setVerifyStep] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const dotAnim = useRef(new Animated.Value(0)).current;
 
   const verifySteps = [
     'Validating BVN...',
@@ -49,8 +49,8 @@ export default function KYCScreen() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(dotAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-          Animated.timing(dotAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+          Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(fadeAnim, { toValue: 0.8, duration: 600, useNativeDriver: true }),
         ])
       );
       loop.start();
@@ -60,17 +60,41 @@ export default function KYCScreen() {
     }
   }, [verifying]);
 
-  const validate = () => {
+  const validateStep1 = () => {
     const e: Record<string, string> = {};
     if (bvn.length !== 11) e.bvn = 'BVN must be 11 digits';
+    return e;
+  };
+
+  const validateStep2 = () => {
+    const e: Record<string, string> = {};
     if (nin.length !== 11) e.nin = 'NIN must be 11 digits';
     if (!dateOfBirth.trim()) e.dateOfBirth = 'Date of birth is required';
     return e;
   };
 
-  const handleSubmit = async () => {
-    const newErrors = validate();
-    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
+  const handleNextStep = () => {
+    const newErrors = validateStep1();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+    setStep(2);
+  };
+
+  const handleBackStep = () => {
+    setErrors({});
+    setSubmitError('');
+    setStep(1);
+  };
+
+  const handleVerifyIdentity = async () => {
+    const newErrors = validateStep2();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
     setSubmitError('');
 
     // Simulate step-by-step verification before actual API call
@@ -127,59 +151,81 @@ export default function KYCScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>Verify Your Identity</Text>
-          <Text style={styles.subtitle}>Complete your KYC verification</Text>
+          <Text style={styles.subtitle}>Step {step} of 2: {step === 1 ? 'BVN Verification' : 'NIN Verification'}</Text>
         </View>
         </View>
 
         <View style={[styles.cardWrapper, { paddingBottom: keyboardVisible ? 300 : 80 }]}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <Ionicons name="location" color="#ffffff" style={styles.avatarIcon} />
+              <Ionicons name={step === 1 ? "card" : "shield-checkmark"} color="#ffffff" style={styles.avatarIcon} />
             </View>
           </View>
 
           <View style={styles.card}>
             <View style={styles.formContainer}>
-              <View style={styles.inputSection}>
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoText}>
-                    Please provide your identity details to complete registration.
-                  </Text>
+              {/* STEP 1: BVN VERIFICATION */}
+              {step === 1 && (
+                <View style={styles.inputSection}>
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoText}>
+                      Please provide your Bank Verification Number (BVN) to verify your identity.
+                    </Text>
+                  </View>
+
+                  <Field label="BVN (11 digits)" error={errors.bvn}>
+                    <TextInput
+                      style={[styles.input, errors.bvn && styles.inputError]}
+                      placeholder="Enter your BVN"
+                      placeholderTextColor={Colors.neutral[500]}
+                      value={bvn}
+                      onChangeText={v => { setBvn(v.replace(/\D/g, '')); if (errors.bvn) setErrors(p => { const e = { ...p }; delete e.bvn; return e; }); }}
+                      keyboardType="number-pad"
+                      maxLength={11}
+                      editable={!isLoading}
+                    />
+                  </Field>
+
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: '50%' }]} />
+                  </View>
                 </View>
+              )}
 
-                <Field label="BVN (11 digits)" error={errors.bvn}>
-                  <TextInput
-                    style={[styles.input, errors.bvn && styles.inputError]}
-                    placeholder="Enter your BVN"
-                    placeholderTextColor={Colors.neutral[500]}
-                    value={bvn}
-                    onChangeText={v => { setBvn(v.replace(/\D/g, '')); if (errors.bvn) setErrors(p => { const e = { ...p }; delete e.bvn; return e; }); }}
-                    keyboardType="number-pad"
-                    maxLength={11}
+              {/* STEP 2: NIN VERIFICATION */}
+              {step === 2 && (
+                <View style={styles.inputSection}>
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoText}>
+                      Please provide your National Identification Number (NIN) and date of birth.
+                    </Text>
+                  </View>
+
+                  <Field label="NIN (11 digits)" error={errors.nin}>
+                    <TextInput
+                      style={[styles.input, errors.nin && styles.inputError]}
+                      placeholder="Enter your NIN"
+                      placeholderTextColor={Colors.neutral[500]}
+                      value={nin}
+                      onChangeText={v => { setNin(v.replace(/\D/g, '')); if (errors.nin) setErrors(p => { const e = { ...p }; delete e.nin; return e; }); }}
+                      keyboardType="number-pad"
+                      maxLength={11}
+                      editable={!isLoading}
+                    />
+                  </Field>
+
+                  <DateOfBirthInput
+                    value={dateOfBirth}
+                    onChangeText={v => { setDateOfBirth(v); if (errors.dateOfBirth) setErrors(p => { const e = { ...p }; delete e.dateOfBirth; return e; }); }}
+                    error={errors.dateOfBirth}
                     editable={!isLoading}
                   />
-                </Field>
 
-                <Field label="NIN (11 digits)" error={errors.nin}>
-                  <TextInput
-                    style={[styles.input, errors.nin && styles.inputError]}
-                    placeholder="Enter your NIN"
-                    placeholderTextColor={Colors.neutral[500]}
-                    value={nin}
-                    onChangeText={v => { setNin(v.replace(/\D/g, '')); if (errors.nin) setErrors(p => { const e = { ...p }; delete e.nin; return e; }); }}
-                    keyboardType="number-pad"
-                    maxLength={11}
-                    editable={!isLoading}
-                  />
-                </Field>
-
-                <DateOfBirthInput
-                  value={dateOfBirth}
-                  onChangeText={v => { setDateOfBirth(v); if (errors.dateOfBirth) setErrors(p => { const e = { ...p }; delete e.dateOfBirth; return e; }); }}
-                  error={errors.dateOfBirth}
-                  editable={!isLoading}
-                />
-              </View>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: '100%' }]} />
+                  </View>
+                </View>
+              )}
 
               <View style={styles.buttonSection}>
                 {submitError ? (
@@ -187,14 +233,27 @@ export default function KYCScreen() {
                     <Text style={styles.errorBannerText}>{submitError}</Text>
                   </View>
                 ) : null}
-                <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleSubmit} disabled={isLoading}>
-                  {isLoading ? <ActivityIndicator color="#FFFFFF" /> : (
-                    <>
-                      <Text style={styles.buttonText}>Complete Registration</Text>
-                      <Text style={styles.arrow}>→</Text>
-                    </>
+
+                <View style={styles.buttonRow}>
+                  {step === 2 && (
+                    <Pressable style={[styles.buttonSecondary, isLoading && styles.buttonDisabled]} onPress={handleBackStep} disabled={isLoading}>
+                      <Text style={styles.buttonSecondaryText}>← Back</Text>
+                    </Pressable>
                   )}
-                </Pressable>
+                  
+                  <Pressable 
+                    style={[styles.button, isLoading && styles.buttonDisabled, step === 2 && styles.buttonFlex]} 
+                    onPress={step === 1 ? handleNextStep : handleVerifyIdentity} 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? <ActivityIndicator color="#FFFFFF" /> : (
+                      <>
+                        <Text style={styles.buttonText}>{step === 1 ? 'Continue' : 'Verify & Continue'}</Text>
+                        <Text style={styles.arrow}>→</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
               </View>
             </View>
           </View>
@@ -258,10 +317,16 @@ const styles = StyleSheet.create({
   inputSection: { gap: Spacing.lg },
   infoBox: { backgroundColor: 'rgba(255,255,255,0.7)', padding: Spacing.md, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: Colors.primary.main },
   infoText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[700], lineHeight: 20 },
+  progressBar: { height: 4, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden', marginTop: Spacing.md },
+  progressFill: { height: '100%', backgroundColor: Colors.primary.main, borderRadius: 2 },
   buttonSection: { paddingTop: Spacing.lg },
   input: { backgroundColor: '#FFFFFF', paddingVertical: Spacing.md, paddingHorizontal: Spacing.md, borderRadius: 8, fontSize: 16, fontFamily: Typography.fontFamily.medium, color: Colors.text.primary.light, borderWidth: 1, borderColor: Colors.neutral[200] },
   inputError: { borderColor: '#ef4444' },
-  button: { backgroundColor: Colors.primary.main, paddingVertical: 20, paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  buttonRow: { flexDirection: 'row', gap: Spacing.md },
+  button: { flex: 1, backgroundColor: Colors.primary.main, paddingVertical: 20, paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  buttonFlex: { flex: 1 },
+  buttonSecondary: { flex: 1, backgroundColor: 'rgba(255,255,255,0.8)', paddingVertical: 20, paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.primary.main },
+  buttonSecondaryText: { color: Colors.primary.main, fontSize: 16, fontWeight: '600', fontFamily: Typography.fontFamily.semibold },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600', fontFamily: Typography.fontFamily.semibold },
   arrow: { color: '#FFFFFF', fontSize: 24, fontFamily: Typography.fontFamily.regular },

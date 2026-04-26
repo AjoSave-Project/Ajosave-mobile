@@ -237,6 +237,15 @@ export default function GroupsScreen() {
                     </View>
                   )}
 
+                  {/* Chat Button */}
+                  <Pressable
+                    style={styles.chatButton}
+                    onPress={() => router.push(`/group-chat?id=${group._id}&name=${encodeURIComponent(group.name)}` as any)}
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={16} color={Colors.primary.main} />
+                    <Text style={styles.chatButtonText}>Group Chat</Text>
+                  </Pressable>
+
                   {group.status === 'active' && group.nextContribution && (
                     <View style={styles.nextContribution}>
                       <Ionicons name="calendar-outline" size={14} color={Colors.neutral[500]} />
@@ -380,6 +389,19 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.neutral[100],
   },
   nextContributionText: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500] },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.primary.main,
+    backgroundColor: Colors.primary.main + '10',
+  },
+  chatButtonText: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
   emptyState: { alignItems: 'center', paddingVertical: Spacing.xl * 2, paddingHorizontal: Spacing.lg },
   emptyStateTitle: { fontSize: 20, fontFamily: Typography.fontFamily.bold, color: Colors.text.primary.light, marginTop: Spacing.md, marginBottom: Spacing.sm },
   emptyStateText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600], textAlign: 'center', marginBottom: Spacing.xl },

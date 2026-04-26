@@ -76,7 +76,7 @@ export default function HomeScreen() {
     { icon: 'business-outline', label: 'Add Bank', onPress: () => router.push('/add-bank-account') },
     { icon: 'grid-outline', label: 'My Groups', onPress: () => router.push('/(tabs)/groups') },
     { icon: 'list-outline', label: 'Transactions', onPress: () => router.push('/(tabs)/wallet') },
-    { icon: 'trending-up-outline', label: 'Analytics', onPress: () => {} },
+    { icon: 'chatbubble-ellipses-outline', label: 'Group Chat', onPress: () => router.push('/group-chats' as any) },
   ];
 
   return (
@@ -89,7 +89,6 @@ export default function HomeScreen() {
         <View style={styles.balanceCard}>
           <View style={styles.balanceCardTop}>
             <View style={styles.balanceCardLeft}>
-              <Text style={styles.balanceLabel}>Total Balance</Text>
               <View style={styles.balanceRow}>
                 {isLoading && !wallet ? (
                   <ActivityIndicator color="#FFFFFF" />
@@ -113,25 +112,19 @@ export default function HomeScreen() {
           </View>
 
           {/* 4-stat grid - responsive layout */}
-          <View style={[styles.balanceStats, { flexWrap: 'wrap' }]}>
+          <View style={styles.balanceStats}>
             {[
-              { label: 'Available', value: wallet?.availableBalance ?? 0 },
               { label: 'Locked', value: wallet?.lockedBalance ?? 0 },
               { label: 'Contributed', value: wallet?.totalContributions ?? 0 },
               { label: 'Received', value: wallet?.totalPayouts ?? 0 },
-            ].map((stat, i) => {
-              const isSmallScreen = width < 360;
-              const statsPerRow = isSmallScreen ? 2 : 4;
-              const statWidth = isSmallScreen ? '50%' : '25%';
-              return (
-                <View key={stat.label} style={[styles.balanceStat, { width: statWidth }]}>
-                  <Text style={styles.balanceStatLabel}>{stat.label}</Text>
-                  <Text style={styles.balanceStatValue} numberOfLines={1}>
-                    {balanceVisible ? formatCurrency(stat.value) : '*****'}
-                  </Text>
-                </View>
-              );
-            })}
+            ].map((stat, i) => (
+              <View key={stat.label} style={[styles.balanceStat, i > 0 && styles.balanceStatBorder]}>
+                <Text style={styles.balanceStatLabel}>{stat.label}</Text>
+                <Text style={styles.balanceStatValue} numberOfLines={1}>
+                  {balanceVisible ? formatCurrency(stat.value) : '*****'}
+                </Text>
+              </View>
+            ))}
           </View>
 
           {/* Next payout row */}
@@ -317,17 +310,17 @@ const styles = StyleSheet.create({
   balanceCardTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md },
   balanceCardLeft: { flex: 1 },
   balanceCardRight: { alignItems: 'flex-end' },
-  balanceLabel: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 4 },
   balanceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  balanceAmount: { fontSize: 28, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF' },
+  balanceAmount: { fontSize: 25, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF' },
   eyeButton: { padding: 4 },
   activeGroupsLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 2 },
   activeGroupsCount: { fontSize: 28, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF', textAlign: 'right' },
   pendingGroupsText: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
-  balanceStats: { flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: Spacing.md, gap: 0 },
-  balanceStat: { paddingVertical: 4, paddingRight: Spacing.sm },
+  balanceStats: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: Spacing.md, marginBottom: Spacing.sm },
+  balanceStat: { flex: 1, alignItems: 'center', paddingVertical: 4 },
+  balanceStatBorder: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' },
   balanceStatLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.7)', marginBottom: 2 },
-  balanceStatValue: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
+  balanceStatValue: { fontSize: 15, fontFamily: Typography.fontFamily.semibold, color: '#FFFFFF' },
   nextPayoutRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

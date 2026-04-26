@@ -28,7 +28,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-screen.png",
-          "imageWidth": 200,
+          "imageWidth": 400,
           "backgroundColor": "#F5F5F5",
           "resizeMode": "contain",
           "dark": {
@@ -55,7 +55,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "8599fb1d-3b49-4772-af40-76d53a30ac63"
+        "projectId": "330f7f96-e937-497e-ad03-309e9a249b94"
       }
     },
     "runtimeVersion": {

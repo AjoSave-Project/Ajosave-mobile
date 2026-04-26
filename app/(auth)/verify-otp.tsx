@@ -117,7 +117,8 @@ export default function VerifyOTPScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>Verify OTP</Text>
-          <Text style={styles.subtitle}>We've sent a 6-digit code to {maskedPhone}</Text>
+          <Text style={styles.subtitle}>Step 2 of 2: Phone Verification</Text>
+          <Text style={styles.maskedPhone}>Code sent to {maskedPhone}</Text>
         </View>
 
         <View style={styles.cardWrapper}>
@@ -201,6 +202,7 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', marginBottom: Spacing['3xl'], paddingHorizontal: Spacing.xl },
   title: { fontSize: 25, fontFamily: Typography.fontFamily.bold, color: Colors.primary.main, marginBottom: Spacing.sm },
   subtitle: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600], textAlign: 'center', lineHeight: 20 },
+  maskedPhone: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], textAlign: 'center', marginTop: Spacing.xs },
   cardWrapper: { position: 'relative', flex: 1 },
   avatarContainer: { position: 'absolute', top: -AVATAR_SIZE / 2, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
   avatar: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, backgroundColor: Colors.primary.main, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4.65, elevation: 8 },

@@ -44,9 +44,9 @@ export default function CreateAccountScreen() {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
 
-    // Pass basic info to KYC screen to complete registration
+    // Pass basic info to KYC verification screen
     router.push({
-      pathname: '/(auth)/kyc',
+      pathname: '/(auth)/kyc-verify',
       params: formData,
     });
   };

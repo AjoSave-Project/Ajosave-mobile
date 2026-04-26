@@ -181,9 +181,17 @@ export default function GroupDetailsScreen() {
           <Ionicons name="arrow-back" size={24} color={Colors.text.primary.light} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>{group?.name || 'Group Details'}</Text>
-        <Pressable onPress={handleShare} style={styles.iconBtn}>
-          <Ionicons name="share-outline" size={22} color={Colors.primary.main} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 0 }}>
+          <Pressable
+            style={styles.iconBtn}
+            onPress={() => router.push(`/group-chat?id=${id}&name=${encodeURIComponent(group?.name || '')}` as any)}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.primary.main} />
+          </Pressable>
+          <Pressable onPress={handleShare} style={styles.iconBtn}>
+            <Ionicons name="share-outline" size={22} color={Colors.primary.main} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -327,40 +335,6 @@ export default function GroupDetailsScreen() {
                   membersJoined={group.members?.length ?? 0}
                   status={group.status}
                 />
-
-                {/* Quick Actions */}
-                {group.status === 'active' && (
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Quick Actions</Text>
-                    <Pressable
-                      style={styles.actionBtn}
-                      onPress={() => router.push('/pay' as any)}
-                    >
-                      <Ionicons name="cash-outline" size={18} color="#fff" />
-                      <Text style={styles.actionBtnText}>Make Contribution</Text>
-                    </Pressable>
-                    {isMyTurn && (
-                      <Pressable
-                        style={[styles.actionBtn, styles.actionBtnPayout, claimingPayout && { opacity: 0.6 }]}
-                        onPress={handleClaimPayout}
-                        disabled={claimingPayout}
-                      >
-                        {claimingPayout
-                          ? <ActivityIndicator size="small" color="#fff" />
-                          : <Ionicons name="arrow-down-circle-outline" size={18} color="#fff" />}
-                        <Text style={styles.actionBtnText}>
-                          {claimingPayout ? 'Processing...' : `Claim Payout (${formatCurrency(group.contributionAmount * group.maxMembers)})`}
-                        </Text>
-                      </Pressable>
-                    )}
-                    {isAdmin && (
-                      <Pressable style={[styles.actionBtn, styles.actionBtnOutline]}>
-                        <Ionicons name="arrow-forward-circle-outline" size={18} color={Colors.primary.main} />
-                        <Text style={[styles.actionBtnText, { color: Colors.primary.main }]}>Process Payout</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                )}
               </View>
             )}
 
@@ -609,6 +583,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary.main, paddingVertical: 12, borderRadius: 12, marginTop: 8,
   },
   actionBtnOutline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: Colors.primary.main },
+  actionBtnChat: { backgroundColor: Colors.primary.main + '15', borderWidth: 1.5, borderColor: Colors.primary.main },
+  actionBtnChatText: { color: Colors.primary.main },
   actionBtnPayout: { backgroundColor: '#22c55e' },
   actionBtnText: { fontSize: 15, fontFamily: Typography.fontFamily.semibold, color: '#fff' },
 

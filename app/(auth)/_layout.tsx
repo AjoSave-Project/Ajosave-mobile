@@ -12,9 +12,9 @@ import { Stack } from 'expo-router';
  * - onboarding: First-time user onboarding experience
  * - welcome: Entry point for sign in/sign up
  * - signin: User login with phone/password
- * - create-account: New user registration
- * - kyc: KYC info (BVN/NIN/DOB)
- * - verify-otp: OTP verification
+ * - create-account: New user registration (Step 1)
+ * - kyc-verify: KYC verification (Step 2) - BVN/NIN/DOB verification
+ * - verify-otp: OTP verification (Step 3)
  * - setup-biometric: Face ID/Touch ID setup
  * - index: Redirect to splash
  * 
@@ -34,7 +34,7 @@ export default function AuthLayout() {
       <Stack.Screen name="welcome" />
       <Stack.Screen name="signin" />
       <Stack.Screen name="create-account" />
-      <Stack.Screen name="kyc" />
+      <Stack.Screen name="kyc-verify" />
       <Stack.Screen name="verify-otp" />
       <Stack.Screen name="setup-biometric" />
       <Stack.Screen name="forgot-password" />
