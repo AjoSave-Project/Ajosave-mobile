@@ -213,9 +213,9 @@ const styles = StyleSheet.create({
   successTitle: { fontSize: 32, fontFamily: Typography.fontFamily.bold, color: Colors.primary.main, textAlign: 'center', marginBottom: Spacing.xl },
   checkmarkCircle: { width: 200, height: 200, borderRadius: 100, backgroundColor: Colors.success.main, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.xl },
   successSubtitle: { fontSize: 16, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600], textAlign: 'center', lineHeight: 24 },
-  button: { backgroundColor: Colors.primary.main, paddingVertical: Spacing.lg, paddingHorizontal: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md },
+  button: { backgroundColor: Colors.primary.main, paddingVertical: 18, paddingHorizontal: 32, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md },
   buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600', fontFamily: Typography.fontFamily.semibold },
+  buttonText: { color: '#FFFFFF', fontSize: 18, fontFamily: Typography.fontFamily.bold },
   arrow: { color: '#FFFFFF', fontSize: 24, fontFamily: Typography.fontFamily.regular },
   skipText: { color: Colors.neutral[600], fontSize: 16, fontFamily: Typography.fontFamily.regular, textAlign: 'center', marginBottom: Spacing.md },
 });

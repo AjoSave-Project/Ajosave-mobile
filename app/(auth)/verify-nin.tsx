@@ -1,52 +1,58 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
-import PhoneInput from '@/components/PhoneInput';
+import DateOfBirthInput from '@/components/DateOfBirthInput';
 import GradientButton from '@/components/ui/GradientButton';
 
 /**
- * Create Account Screen - Step 1 of 4
+ * Verify NIN Screen - Step 4 of 4
  * 
- * Collects email and phone number for initial verification
+ * Collects NIN and Date of Birth for identity verification
  */
-export default function CreateAccountScreen() {
+export default function VerifyNINScreen() {
   const keyboardVisible = useKeyboardVisible();
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const params = useLocalSearchParams<{ 
+    email: string; 
+    phoneNumber: string; 
+    userId: string;
+    bvn: string;
+  }>();
+  
+  const [nin, setNin] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const update = (field: string, value: string) => {
-    if (field === 'email') setEmail(value);
-    else setPhoneNumber(value);
-    if (errors[field]) setErrors(prev => { const e = { ...prev }; delete e[field]; return e; });
-  };
-
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!email.trim()) e.email = 'Email is required';
-    else if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
-      e.email = 'Please enter a valid email address';
-    }
-    if (!phoneNumber.trim()) e.phoneNumber = 'Phone number is required';
-    return e;
-  };
-
   const handleContinue = () => {
-    const newErrors = validate();
-    if (Object.keys(newErrors).length > 0) { 
-      setErrors(newErrors); 
-      return; 
+    const newErrors: Record<string, string> = {};
+    
+    if (nin.length !== 11) {
+      newErrors.nin = 'NIN must be 11 digits';
+    }
+    if (!dateOfBirth.trim()) {
+      newErrors.dateOfBirth = 'Date of birth is required';
     }
 
-    // Navigate to OTP verification
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Navigate to profile completion
     router.push({
-      pathname: '/(auth)/verify-contact',
-      params: { email, phoneNumber },
+      pathname: '/(auth)/complete-profile',
+      params: { 
+        email: params.email, 
+        phoneNumber: params.phoneNumber,
+        userId: params.userId,
+        bvn: params.bvn,
+        nin,
+        dateOfBirth
+      },
     });
   };
 
@@ -62,21 +68,21 @@ export default function CreateAccountScreen() {
       <View style={styles.topSection}>
         <Pressable 
           style={styles.backButton} 
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/welcome')}
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/verify-bvn')}
         >
           <Text style={styles.backArrow}>←</Text>
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={styles.title}>Hello!</Text>
-          <Text style={styles.subtitle}>Step 1 of 4: Contact Information</Text>
+          <Text style={styles.title}>Verify Identity</Text>
+          <Text style={styles.subtitle}>Step 4 of 4: NIN Verification</Text>
         </View>
       </View>
 
       <View style={[styles.cardWrapper, { paddingBottom: keyboardVisible ? 300 : 80 }]}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <Ionicons name="mail" color="#ffffff" style={styles.avatarIcon} />
+            <Ionicons name="shield-checkmark" color="#ffffff" style={styles.avatarIcon} />
           </View>
         </View>
 
@@ -85,31 +91,36 @@ export default function CreateAccountScreen() {
             <View style={styles.inputSection}>
               <View style={styles.infoBox}>
                 <Text style={styles.infoText}>
-                  Let's start with your contact information. We'll send a verification code to your email.
+                  Please provide your National Identification Number (NIN) and date of birth.
                 </Text>
               </View>
 
-              <Field label="Email Address" error={errors.email} hint="e.g. yourname@example.com">
-                <TextInput 
-                  style={[styles.input, errors.email && styles.inputError]} 
-                  placeholder="Enter your email" 
-                  placeholderTextColor={Colors.neutral[500]} 
-                  value={email} 
-                  onChangeText={v => update('email', v)} 
-                  keyboardType="email-address" 
-                  autoCapitalize="none"
-                  autoComplete="email"
+              <Field label="NIN (11 digits)" error={errors.nin}>
+                <TextInput
+                  style={[styles.input, errors.nin && styles.inputError]}
+                  placeholder="Enter your NIN"
+                  placeholderTextColor={Colors.neutral[500]}
+                  value={nin}
+                  onChangeText={v => { 
+                    setNin(v.replace(/\D/g, '')); 
+                    if (errors.nin) setErrors(p => { const e = { ...p }; delete e.nin; return e; });
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={11}
                 />
               </Field>
 
-              <PhoneInput
-                value={phoneNumber}
-                onChangeText={v => update('phoneNumber', v)}
-                error={errors.phoneNumber}
+              <DateOfBirthInput
+                value={dateOfBirth}
+                onChangeText={v => { 
+                  setDateOfBirth(v); 
+                  if (errors.dateOfBirth) setErrors(p => { const e = { ...p }; delete e.dateOfBirth; return e; });
+                }}
+                error={errors.dateOfBirth}
               />
 
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '25%' }]} />
+                <View style={[styles.progressFill, { width: '100%' }]} />
               </View>
             </View>
 
@@ -119,13 +130,6 @@ export default function CreateAccountScreen() {
                 onPress={handleContinue}
                 icon="arrow-forward"
               />
-
-              <View style={styles.signInContainer}>
-                <Text style={styles.signInText}>Already have an account? </Text>
-                <Pressable onPress={() => router.push('/(auth)/signin')}>
-                  <Text style={styles.signInLink}>Sign In</Text>
-                </Pressable>
-              </View>
             </View>
           </View>
         </View>
@@ -134,12 +138,12 @@ export default function CreateAccountScreen() {
   );
 }
 
-function Field({ label, error, hint, children }: { label: string; error?: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <View style={{ gap: 4 }}>
       <Text style={fieldStyles.label}>{label}</Text>
       {children}
-      {error ? <Text style={fieldStyles.error}>{error}</Text> : hint ? <Text style={fieldStyles.hint}>{hint}</Text> : null}
+      {error && <Text style={fieldStyles.error}>{error}</Text>}
     </View>
   );
 }
@@ -147,7 +151,6 @@ function Field({ label, error, hint, children }: { label: string; error?: string
 const fieldStyles = StyleSheet.create({
   label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[700], marginLeft: Spacing.md },
   error: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: '#ef4444', marginLeft: Spacing.xs },
-  hint: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], marginLeft: Spacing.xs },
 });
 
 const AVATAR_SIZE = 90;
@@ -175,7 +178,4 @@ const styles = StyleSheet.create({
   buttonSection: { paddingTop: Spacing.lg },
   input: { backgroundColor: '#FFFFFF', paddingVertical: Spacing.md, paddingHorizontal: Spacing.md, borderRadius: 8, fontSize: 16, fontFamily: Typography.fontFamily.medium, color: Colors.text.primary.light, borderWidth: 1, borderColor: Colors.neutral[200] },
   inputError: { borderColor: '#ef4444' },
-  signInContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: Spacing.md },
-  signInText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600] },
-  signInLink: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main },
 });

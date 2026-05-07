@@ -13,7 +13,6 @@
  * - Slot: Expo Router navigation slot (renders active route)
  */
 
-import { useEffect, useState } from 'react';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -21,7 +20,6 @@ import 'react-native-reanimated';
 
 import { ThemeProvider, AuthProvider, WalletProvider, GroupsProvider } from '@/contexts';
 import { ErrorBoundary } from '@/components';
-import SplashScreenComponent from '@/components/SplashScreen';
 import { ApiService } from '@/services/apiService';
 
 // Set base URL immediately (synchronous) so it's ready before any provider mounts
@@ -43,20 +41,10 @@ export default function RootLayout() {
     'Gilroy-Bold': require('@/assets/fonts/Gilroy-Bold.ttf'),
   });
 
-  const [showSplash, setShowSplash] = useState(true);
-
-  useEffect(() => {
-    if (fontsLoaded) {
-      // Keep splash screen visible for 3 seconds
-      const timer = setTimeout(() => {
-        setShowSplash(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded || showSplash) {
-    return <SplashScreenComponent />;
+  // Don't render anything until fonts are loaded
+  // This prevents flash of unstyled text
+  if (!fontsLoaded) {
+    return null;
   }
   
   return (

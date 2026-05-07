@@ -12,10 +12,15 @@ import { Stack } from 'expo-router';
  * - onboarding: First-time user onboarding experience
  * - welcome: Entry point for sign in/sign up
  * - signin: User login with phone/password
- * - create-account: New user registration (Step 1)
- * - kyc-verify: KYC verification (Step 2) - BVN/NIN/DOB verification
- * - verify-otp: OTP verification (Step 3)
+ * - create-account: New user registration (Step 1) - Email & Phone
+ * - verify-contact: Email OTP verification (Step 2)
+ * - verify-bvn: BVN verification (Step 3)
+ * - verify-nin: NIN verification (Step 4)
+ * - complete-profile: Name & Password (Final Step)
+ * - verify-otp: OTP verification after registration
  * - setup-biometric: Face ID/Touch ID setup
+ * - forgot-password: Password reset request
+ * - reset-password: Password reset with OTP
  * - index: Redirect to splash
  * 
  * @returns Stack navigator configured for auth flow
@@ -34,7 +39,10 @@ export default function AuthLayout() {
       <Stack.Screen name="welcome" />
       <Stack.Screen name="signin" />
       <Stack.Screen name="create-account" />
-      <Stack.Screen name="kyc-verify" />
+      <Stack.Screen name="verify-contact" />
+      <Stack.Screen name="verify-bvn" />
+      <Stack.Screen name="verify-nin" />
+      <Stack.Screen name="complete-profile" />
       <Stack.Screen name="verify-otp" />
       <Stack.Screen name="setup-biometric" />
       <Stack.Screen name="forgot-password" />

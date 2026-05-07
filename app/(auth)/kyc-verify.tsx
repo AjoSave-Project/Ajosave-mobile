@@ -119,7 +119,13 @@ export default function KYCVerifyScreen() {
       if (result && (result as any).requiresOtp) {
         router.replace({
           pathname: '/(auth)/verify-otp',
-          params: { userId: (result as any).userId, phoneNumber: (result as any).phoneNumber, purpose: 'signup', devOtp: (result as any).devOtp ?? '' },
+          params: { 
+            userId: (result as any).userId, 
+            email: (result as any).email,
+            phoneNumber: (result as any).phoneNumber, 
+            purpose: 'signup', 
+            devOtp: (result as any).devOtp ?? '' 
+          },
         });
       } else {
         router.replace('/(auth)/setup-biometric');
@@ -293,7 +299,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 }
 
 const fieldStyles = StyleSheet.create({
-  label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[400], marginLeft: Spacing.md },
+  label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[800], marginLeft: Spacing.md },
   error: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: '#ef4444', marginLeft: Spacing.xs },
 });
 

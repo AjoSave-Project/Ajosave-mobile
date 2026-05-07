@@ -10,6 +10,10 @@ import { Spacing } from '@/constants/spacing';
  * Shows app introduction and value proposition with Phone.png illustration
  */
 export default function OnboardingScreen() {
+  const handleGetStarted = () => {
+    router.push('/(auth)/welcome');
+  };
+
   return (
     <View style={styles.container}>
       {/* Image Illustration */}
@@ -33,7 +37,7 @@ export default function OnboardingScreen() {
       {/* CTA Button */}
       <Pressable 
         style={styles.button}
-        onPress={() => router.push('/(auth)/welcome')}
+        onPress={handleGetStarted}
       >
         <Text style={styles.buttonText}>Get Started</Text>
       </Pressable>
@@ -79,14 +83,15 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: Colors.primary.main,
-    paddingVertical: 26,
-    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '600',
-    fontFamily: Typography.fontFamily.semibold,
+    fontFamily: Typography.fontFamily.bold,
   },
 });

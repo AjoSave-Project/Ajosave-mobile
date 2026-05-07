@@ -31,6 +31,7 @@ export default function ForgotPasswordScreen() {
         pathname: '/(auth)/reset-password',
         params: {
           userId: result.userId ?? '',
+          email: result.email ?? '',
           phoneNumber: result.phoneNumber ?? phoneNumber,
           devOtp: result.devOtp ?? '',
         },

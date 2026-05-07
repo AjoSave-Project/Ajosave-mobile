@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   GROUPS_DATA: '@groups_data',
   THEME_PREFERENCE: '@theme_preference',
   OFFLINE_QUEUE: '@offline_queue',
+  HAS_SEEN_ONBOARDING: '@has_seen_onboarding',
 } as const;
 
 /**

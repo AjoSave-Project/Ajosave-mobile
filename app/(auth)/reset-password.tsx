@@ -9,7 +9,7 @@ import { AuthService } from '@/services/authService';
 import { getErrorMessage } from '@/utils/errors';
 
 export default function ResetPasswordScreen() {
-  const params = useLocalSearchParams<{ userId: string; phoneNumber: string; devOtp?: string }>();
+  const params = useLocalSearchParams<{ userId: string; email: string; phoneNumber: string; devOtp?: string }>();
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
@@ -99,9 +99,9 @@ export default function ResetPasswordScreen() {
     }
   };
 
-  const maskedPhone = params.phoneNumber
-    ? params.phoneNumber.replace(/(\+\d{3})\d+(\d{4})/, '$1****$2')
-    : 'your phone';
+  const maskedEmail = params.email
+    ? params.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+    : 'your email';
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
@@ -120,7 +120,7 @@ export default function ResetPasswordScreen() {
         </Pressable>
         <View style={styles.header}>
           <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>Enter the code sent to {maskedPhone} and choose a new password</Text>
+          <Text style={styles.subtitle}>Enter the code sent to {maskedEmail} and choose a new password</Text>
         </View>
       </View>
 
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#b3ceef', borderTopLeftRadius: 50, borderTopRightRadius: 50, paddingTop: AVATAR_SIZE / 2 + Spacing.xl, paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg, flex: 1 },
   inputSection: { gap: Spacing.lg },
   group: { gap: Spacing.xs },
-  label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[400], marginLeft: Spacing.md },
+  label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[700], marginLeft: Spacing.md },
   otpContainer: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm },
   otpBox: { width: 48, height: 54, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 2, borderColor: Colors.neutral[200], fontSize: 22, fontFamily: Typography.fontFamily.bold, color: Colors.text.primary.light, textAlign: 'center' },
   otpBoxFilled: { borderColor: Colors.primary.main },

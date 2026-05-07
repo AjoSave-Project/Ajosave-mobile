@@ -67,7 +67,13 @@ export default function SignInScreen() {
       if (result && (result as any).requiresOtp) {
         router.push({
           pathname: '/(auth)/verify-otp',
-          params: { userId: (result as any).userId, phoneNumber: (result as any).phoneNumber, purpose: 'login', devOtp: (result as any).devOtp ?? '' },
+          params: { 
+            userId: (result as any).userId, 
+            email: (result as any).email,
+            phoneNumber: (result as any).phoneNumber, 
+            purpose: 'login', 
+            devOtp: (result as any).devOtp ?? '' 
+          },
         });
       } else {
         router.replace('/(tabs)/home');
@@ -279,7 +285,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontFamily: Typography.fontFamily.regular,
-    color: Colors.neutral[400],
+    color: Colors.neutral[700],
     marginLeft: Spacing.md,
   },
   input: {
@@ -358,7 +364,7 @@ const styles = StyleSheet.create({
   signUpText: {
     fontSize: 14,
     fontFamily: Typography.fontFamily.regular,
-    color: Colors.neutral[600],
+    color: Colors.neutral[700],
   },
   signUpLink: {
     fontSize: 14,

@@ -22,20 +22,13 @@
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
+    "splash": {
+      "image": "./assets/images/splash-minimal.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3d71d9ff"
+    },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-screen.png",
-          "imageWidth": 400,
-          "backgroundColor": "#F5F5F5",
-          "resizeMode": "contain",
-          "dark": {
-            "backgroundColor": "#F5F5F5"
-          }
-        }
-      ],
       [
         "expo-font",
         {

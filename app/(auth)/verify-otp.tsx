@@ -10,7 +10,7 @@ import { AuthService } from '@/services/authService';
 
 export default function VerifyOTPScreen() {
   const { completeOtpLogin } = useAuth();
-  const params = useLocalSearchParams<{ userId: string; phoneNumber: string; purpose: string; devOtp?: string }>();
+  const params = useLocalSearchParams<{ userId: string; email: string; phoneNumber: string; purpose: string; devOtp?: string }>();
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(30);
@@ -56,6 +56,7 @@ export default function VerifyOTPScreen() {
       setCanResend(false);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
+      Alert.alert('Success', `Verification code sent to ${result.email || 'your email'}`);
       // Auto-fill new dev OTP if returned
       if (result.devOtp) {
         setOtp(result.devOtp.split(''));
@@ -96,9 +97,9 @@ export default function VerifyOTPScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const maskedPhone = params.phoneNumber
-    ? params.phoneNumber.replace(/(\+\d{3})\d+(\d{4})/, '$1****$2')
-    : 'your phone';
+  const maskedEmail = params.email
+    ? params.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+    : 'your email';
 
   return (
     <KeyboardAvoidingView
@@ -117,8 +118,8 @@ export default function VerifyOTPScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>Verify OTP</Text>
-          <Text style={styles.subtitle}>Step 2 of 2: Phone Verification</Text>
-          <Text style={styles.maskedPhone}>Code sent to {maskedPhone}</Text>
+          <Text style={styles.subtitle}>Step 2 of 2: Email Verification</Text>
+          <Text style={styles.maskedEmail}>Code sent to {maskedEmail}</Text>
         </View>
 
         <View style={styles.cardWrapper}>
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', marginBottom: Spacing['3xl'], paddingHorizontal: Spacing.xl },
   title: { fontSize: 25, fontFamily: Typography.fontFamily.bold, color: Colors.primary.main, marginBottom: Spacing.sm },
   subtitle: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600], textAlign: 'center', lineHeight: 20 },
-  maskedPhone: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], textAlign: 'center', marginTop: Spacing.xs },
+  maskedEmail: { fontSize: 12, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[500], textAlign: 'center', marginTop: Spacing.xs },
   cardWrapper: { position: 'relative', flex: 1 },
   avatarContainer: { position: 'absolute', top: -AVATAR_SIZE / 2, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
   avatar: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, backgroundColor: Colors.primary.main, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4.65, elevation: 8 },

@@ -15,6 +15,12 @@ interface Props {
  * Nigerian phone input with +234 prefix.
  * Stores and emits the full number (e.g. +2348012345678).
  * Displays only the local part after the prefix.
+ * 
+ * Features:
+ * - Automatically strips leading zeros (since +234 is already present)
+ * - Accepts only numeric input
+ * - Maximum 10 digits after country code
+ * - Shows Nigerian flag emoji
  */
 export default function PhoneInput({ value, onChangeText, error, editable = true }: Props) {
   // Strip +234 or leading 0 to get the local digits shown in the input
@@ -26,7 +32,11 @@ export default function PhoneInput({ value, onChangeText, error, editable = true
 
   const handleChange = (text: string) => {
     // Only digits, max 10
-    const digits = text.replace(/\D/g, '').slice(0, 10);
+    let digits = text.replace(/\D/g, '').slice(0, 10);
+    
+    // Remove leading zeros (Nigerian numbers don't start with 0 after +234)
+    digits = digits.replace(/^0+/, '');
+    
     onChangeText(digits ? `+234${digits}` : '');
   };
 
@@ -55,7 +65,7 @@ export default function PhoneInput({ value, onChangeText, error, editable = true
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[400], marginLeft: Spacing.md },
+  label: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[700], marginLeft: Spacing.md },
   container: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: Colors.neutral[200] },
   containerError: { borderColor: '#ef4444' },
   prefix: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.md },
