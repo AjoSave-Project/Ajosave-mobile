@@ -93,10 +93,10 @@ export default function VerifyContactScreen() {
 
     setIsLoading(true);
     try {
-      // Verify OTP without completing signup
-      await AuthService.verifyContactOtp(userId, otpCode);
+      // Verify OTP with backend
+      const result = await AuthService.verifyContactOtp(userId, otpCode);
       
-      // Navigate to BVN verification with contact info
+      // Navigate to BVN verification with verified contact info
       router.push({
         pathname: '/(auth)/verify-bvn',
         params: { 
@@ -164,11 +164,6 @@ export default function VerifyContactScreen() {
         <View style={styles.card}>
           <View style={styles.formContainer}>
             <View style={styles.inputSection}>
-              <View style={styles.testBanner}>
-                <Ionicons name="information-circle" size={20} color="#1e40af" />
-                <Text style={styles.testBannerText}>Test step: Use code 123456</Text>
-              </View>
-              
               <Text style={styles.otpLabel}>Enter Code</Text>
 
               <View style={styles.otpContainer}>
@@ -249,8 +244,6 @@ const styles = StyleSheet.create({
   formContainer: { flex: 1, justifyContent: 'space-between' },
   inputSection: { gap: Spacing.lg, alignItems: 'center' },
   buttonSection: { marginTop: 'auto' },
-  testBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#dbeafe', borderWidth: 1, borderColor: '#3b82f6', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16, width: '100%' },
-  testBannerText: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: '#1e40af' },
   otpLabel: { fontSize: 16, fontFamily: Typography.fontFamily.semibold, color: Colors.neutral[700], marginBottom: Spacing.sm },
   otpContainer: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.md, width: '100%', paddingHorizontal: Spacing.sm },
   otpBox: { width: 50, height: 56, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 2, borderColor: Colors.neutral[200], fontSize: 24, fontFamily: Typography.fontFamily.bold, color: Colors.text.primary.light, textAlign: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 },
