@@ -9,7 +9,7 @@ import { AuthService } from '@/services/authService';
 import { getErrorMessage } from '@/utils/errors';
 
 export default function ResetPasswordScreen() {
-  const params = useLocalSearchParams<{ userId: string; email: string; phoneNumber: string; devOtp?: string }>();
+  const params = useLocalSearchParams<{ userId: string; email: string; phoneNumber: string }>();
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
@@ -22,10 +22,6 @@ export default function ResetPasswordScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
   const inputRefs = useRef<(TextInput | null)[]>([]);
-
-  useEffect(() => {
-    if (params.devOtp) setOtp(params.devOtp.split(''));
-  }, [params.devOtp]);
 
   useEffect(() => {
     if (timer > 0) {
@@ -58,7 +54,6 @@ export default function ResetPasswordScreen() {
       setCanResend(false);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
-      if (result.devOtp) setOtp(result.devOtp.split(''));
     } catch (error: any) {
       setSubmitError(getErrorMessage(error));
     }
@@ -137,11 +132,6 @@ export default function ResetPasswordScreen() {
             {/* OTP */}
             <View style={styles.group}>
               <Text style={styles.label}>Verification Code</Text>
-              {params.devOtp ? (
-                <View style={styles.devBanner}>
-                  <Text style={styles.devBannerText}>DEV MODE — OTP auto-filled: {params.devOtp}</Text>
-                </View>
-              ) : null}
               <View style={styles.otpContainer}>
                 {otp.map((digit, index) => (
                   <TextInput

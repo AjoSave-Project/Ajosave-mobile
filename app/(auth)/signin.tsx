@@ -72,7 +72,6 @@ export default function SignInScreen() {
             email: (result as any).email,
             phoneNumber: (result as any).phoneNumber, 
             purpose: 'login', 
-            devOtp: (result as any).devOtp ?? '' 
           },
         });
       } else {

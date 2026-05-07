@@ -10,20 +10,13 @@ import { AuthService } from '@/services/authService';
 
 export default function VerifyOTPScreen() {
   const { completeOtpLogin } = useAuth();
-  const params = useLocalSearchParams<{ userId: string; email: string; phoneNumber: string; purpose: string; devOtp?: string }>();
+  const params = useLocalSearchParams<{ userId: string; email: string; phoneNumber: string; purpose: string }>();
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
-
-  useEffect(() => {
-    // Auto-fill in dev mode
-    if (params.devOtp) {
-      setOtp(params.devOtp.split(''));
-    }
-  }, [params.devOtp]);
 
   useEffect(() => {
     if (timer > 0) {
@@ -57,10 +50,6 @@ export default function VerifyOTPScreen() {
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
       Alert.alert('Success', `Verification code sent to ${result.email || 'your email'}`);
-      // Auto-fill new dev OTP if returned
-      if (result.devOtp) {
-        setOtp(result.devOtp.split(''));
-      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to resend OTP');
     }
@@ -133,12 +122,6 @@ export default function VerifyOTPScreen() {
             <View style={styles.formContainer}>
               <View style={styles.inputSection}>
                 <Text style={styles.otpLabel}>Enter Code</Text>
-
-                {params.devOtp ? (
-                  <View style={styles.devBanner}>
-                    <Text style={styles.devBannerText}>DEV MODE — OTP auto-filled: {params.devOtp}</Text>
-                  </View>
-                ) : null}
 
                 <View style={styles.otpContainer}>
                   {otp.map((digit, index) => (

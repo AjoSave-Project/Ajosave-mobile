@@ -33,7 +33,6 @@ export default function ForgotPasswordScreen() {
           userId: result.userId ?? '',
           email: result.email ?? '',
           phoneNumber: result.phoneNumber ?? phoneNumber,
-          devOtp: result.devOtp ?? '',
         },
       });
     } catch (error: any) {

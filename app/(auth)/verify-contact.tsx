@@ -22,20 +22,12 @@ export default function VerifyContactScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [userId, setUserId] = useState('');
-  const [devOtp, setDevOtp] = useState('');
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   // Send initial OTP on mount
   useEffect(() => {
     sendInitialOtp();
   }, []);
-
-  // Auto-fill dev OTP
-  useEffect(() => {
-    if (devOtp) {
-      setOtp(devOtp.split(''));
-    }
-  }, [devOtp]);
 
   // Timer countdown
   useEffect(() => {
@@ -53,9 +45,6 @@ export default function VerifyContactScreen() {
       // Create a temporary user to send OTP
       const response = await AuthService.sendOtpToEmail(params.email, params.phoneNumber);
       setUserId(response.userId);
-      if (response.devOtp) {
-        setDevOtp(response.devOtp);
-      }
     } catch (error: any) {
       Alert.alert('Error', getErrorMessage(error));
       router.back();
@@ -87,9 +76,6 @@ export default function VerifyContactScreen() {
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
       Alert.alert('Success', `Verification code sent to ${result.email || params.email}`);
-      if (result.devOtp) {
-        setDevOtp(result.devOtp);
-      }
     } catch (error: any) {
       Alert.alert('Error', getErrorMessage(error));
     }
@@ -179,12 +165,6 @@ export default function VerifyContactScreen() {
           <View style={styles.formContainer}>
             <View style={styles.inputSection}>
               <Text style={styles.otpLabel}>Enter Code</Text>
-
-              {devOtp ? (
-                <View style={styles.devBanner}>
-                  <Text style={styles.devBannerText}>DEV MODE — OTP auto-filled: {devOtp}</Text>
-                </View>
-              ) : null}
 
               <View style={styles.otpContainer}>
                 {otp.map((digit, index) => (

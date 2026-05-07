@@ -124,7 +124,6 @@ export default function KYCVerifyScreen() {
             email: (result as any).email,
             phoneNumber: (result as any).phoneNumber, 
             purpose: 'signup', 
-            devOtp: (result as any).devOtp ?? '' 
           },
         });
       } else {

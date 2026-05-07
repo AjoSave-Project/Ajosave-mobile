@@ -31,7 +31,6 @@ export interface OtpRequiredResponse {
   userId: string;
   email: string;
   phoneNumber: string;
-  devOtp?: string;
 }
 
 class AuthServiceClass {
@@ -78,9 +77,9 @@ class AuthServiceClass {
 
   // Simplified - skip OTP for contact verification in this flow
   // The real OTP will be sent after full registration
-  async sendOtpToEmail(email: string, phoneNumber: string): Promise<{ userId: string; devOtp?: string }> {
+  async sendOtpToEmail(email: string, phoneNumber: string): Promise<{ userId: string }> {
     // Return a temporary ID - no actual OTP sent yet
-    return { userId: `temp_${Date.now()}`, devOtp: '123456' };
+    return { userId: `temp_${Date.now()}` };
   }
 
   async verifyContactOtp(userId: string, otp: string): Promise<void> {
@@ -91,10 +90,10 @@ class AuthServiceClass {
     return Promise.resolve();
   }
 
-  async sendOtp(userId: string): Promise<{ email?: string; devOtp?: string }> {
-    const response = await ApiService.post<{ email: string; devOtp?: string }>('/auth/send-otp', { userId });
+  async sendOtp(userId: string): Promise<{ email?: string }> {
+    const response = await ApiService.post<{ email: string }>('/auth/send-otp', { userId });
     if (!response.success) throw new Error('Failed to send OTP');
-    return { email: response.data?.email, devOtp: response.data?.devOtp };
+    return { email: response.data?.email };
   }
 
   async verifyOtp(userId: string, otp: string): Promise<{ user: User; token: string }> {
@@ -167,8 +166,8 @@ class AuthServiceClass {
     }
   }
 
-  async forgotPassword(phoneNumber: string): Promise<{ userId?: string; email?: string; phoneNumber?: string; devOtp?: string }> {
-    const response = await ApiService.post<{ userId?: string; email?: string; phoneNumber?: string; devOtp?: string }>('/auth/forgot-password', { phoneNumber });
+  async forgotPassword(phoneNumber: string): Promise<{ userId?: string; email?: string; phoneNumber?: string }> {
+    const response = await ApiService.post<{ userId?: string; email?: string; phoneNumber?: string }>('/auth/forgot-password', { phoneNumber });
     if (response.success) return response.data ?? {};
     throw new Error('Failed to send reset OTP');
   }
