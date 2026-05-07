@@ -79,18 +79,27 @@ class AuthServiceClass {
   // The real OTP will be sent after full registration
   async sendOtpToEmail(email: string, phoneNumber: string): Promise<{ userId: string }> {
     // Return a temporary ID - no actual OTP sent yet
+    // This is just a placeholder step in the UI flow
     return { userId: `temp_${Date.now()}` };
   }
 
   async verifyContactOtp(userId: string, otp: string): Promise<void> {
     // Just validate format - no backend call needed
+    // This is a mock verification step
     if (otp !== '123456') {
-      throw new Error('Invalid OTP. Use 123456 for testing.');
+      throw new Error('Invalid OTP. Use 123456 for this step.');
     }
     return Promise.resolve();
   }
 
   async sendOtp(userId: string): Promise<{ email?: string }> {
+    // Check if this is a temp ID from verify-contact flow
+    if (userId.startsWith('temp_')) {
+      // Mock resend for verify-contact step
+      return Promise.resolve({ email: 'your email' });
+    }
+    
+    // Real OTP send for actual users
     const response = await ApiService.post<{ email: string }>('/auth/send-otp', { userId });
     if (!response.success) throw new Error('Failed to send OTP');
     return { email: response.data?.email };
