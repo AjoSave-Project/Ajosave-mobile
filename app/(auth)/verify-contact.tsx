@@ -21,6 +21,7 @@ export default function VerifyContactScreen() {
   const [canResend, setCanResend] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [userId, setUserId] = useState('');
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
@@ -68,7 +69,9 @@ export default function VerifyContactScreen() {
   };
 
   const handleResend = async () => {
-    if (!canResend || !userId) return;
+    if (!canResend || !userId || isResending) return;
+    
+    setIsResending(true);
     try {
       const result = await AuthService.sendOtp(userId);
       setTimer(30);
@@ -78,6 +81,8 @@ export default function VerifyContactScreen() {
       Alert.alert('Success', `Verification code sent to ${result.email || params.email}`);
     } catch (error: any) {
       Alert.alert('Error', getErrorMessage(error));
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -187,8 +192,13 @@ export default function VerifyContactScreen() {
               <View style={styles.resendContainer}>
                 {!canResend ? (
                   <Text style={styles.timerText}>Resend code in {formatTime(timer)}</Text>
+                ) : isResending ? (
+                  <View style={styles.resendingContainer}>
+                    <ActivityIndicator size="small" color={Colors.primary.main} />
+                    <Text style={styles.resendingText}>Sending...</Text>
+                  </View>
                 ) : (
-                  <Pressable onPress={handleResend}>
+                  <Pressable onPress={handleResend} disabled={isResending}>
                     <Text style={styles.resendText}>Resend Code</Text>
                   </Pressable>
                 )}
@@ -251,6 +261,8 @@ const styles = StyleSheet.create({
   resendContainer: { marginTop: Spacing.md, alignItems: 'center' },
   timerText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600] },
   resendText: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main, textDecorationLine: 'underline' },
+  resendingContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  resendingText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600] },
   devBanner: { backgroundColor: '#fefce8', borderWidth: 1, borderColor: '#fde047', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
   devBannerText: { fontSize: 12, fontFamily: Typography.fontFamily.semibold, color: '#854d0e', textAlign: 'center' },
   progressBar: { height: 4, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden', marginTop: Spacing.md, width: '100%' },

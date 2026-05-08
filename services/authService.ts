@@ -75,6 +75,29 @@ class AuthServiceClass {
     throw new Error('Signup failed');
   }
 
+  async checkRegistrationStatus(email: string, phoneNumber: string): Promise<{
+    exists: boolean;
+    canContinue: boolean;
+    isIncomplete?: boolean;
+    userId?: string;
+    email?: string;
+    phoneNumber?: string;
+    isEmailVerified?: boolean;
+    currentStep?: string;
+    message?: string;
+  }> {
+    const response = await ApiService.post<any>('/auth/check-registration-status', { 
+      email, 
+      phoneNumber 
+    });
+    
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to check registration status');
+    }
+    
+    return response.data;
+  }
+
   // Simplified - skip OTP for contact verification in this flow
   // The real OTP will be sent after full registration
   async sendOtpToEmail(email: string, phoneNumber: string): Promise<{ userId: string; email: string }> {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
@@ -8,6 +8,8 @@ import { Spacing } from '@/constants/spacing';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import PhoneInput from '@/components/PhoneInput';
 import GradientButton from '@/components/ui/GradientButton';
+import { AuthService } from '@/services/authService';
+import { getErrorMessage } from '@/utils/errors';
 
 /**
  * Create Account Screen - Step 1 of 4
@@ -19,6 +21,7 @@ export default function CreateAccountScreen() {
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isChecking, setIsChecking] = useState(false);
 
   const update = (field: string, value: string) => {
     if (field === 'email') setEmail(value);
@@ -36,18 +39,74 @@ export default function CreateAccountScreen() {
     return e;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) { 
       setErrors(newErrors); 
       return; 
     }
 
-    // Navigate to OTP verification
-    router.push({
-      pathname: '/(auth)/verify-contact',
-      params: { email, phoneNumber },
-    });
+    setIsChecking(true);
+    try {
+      // Check if user has incomplete registration
+      const status = await AuthService.checkRegistrationStatus(email, phoneNumber);
+      
+      if (status.exists && !status.canContinue) {
+        // Complete registration exists
+        Alert.alert(
+          'Account Exists',
+          status.message || 'An account with this email or phone number already exists. Please sign in.',
+          [
+            { text: 'Sign In', onPress: () => router.push('/(auth)/signin') },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+        return;
+      }
+
+      if (status.canContinue && status.isIncomplete) {
+        // Incomplete registration - ask if they want to continue
+        Alert.alert(
+          'Continue Registration?',
+          'You have an incomplete registration. Would you like to continue where you left off?',
+          [
+            {
+              text: 'Continue',
+              onPress: () => {
+                // Route to appropriate step
+                if (status.currentStep === 'email-verification') {
+                  router.push({
+                    pathname: '/(auth)/verify-contact',
+                    params: { email: status.email!, phoneNumber: status.phoneNumber! },
+                  });
+                } else if (status.currentStep === 'bvn-verification') {
+                  router.push({
+                    pathname: '/(auth)/verify-bvn',
+                    params: { 
+                      email: status.email!, 
+                      phoneNumber: status.phoneNumber!,
+                      userId: status.userId!,
+                    },
+                  });
+                }
+              }
+            },
+            { text: 'Start Over', style: 'cancel' }
+          ]
+        );
+        return;
+      }
+
+      // No existing registration - proceed normally
+      router.push({
+        pathname: '/(auth)/verify-contact',
+        params: { email, phoneNumber },
+      });
+    } catch (error: any) {
+      Alert.alert('Error', getErrorMessage(error));
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   return (
@@ -115,8 +174,9 @@ export default function CreateAccountScreen() {
 
             <View style={styles.buttonSection}>
               <GradientButton
-                label="Continue"
+                label={isChecking ? "Checking..." : "Continue"}
                 onPress={handleContinue}
+                disabled={isChecking}
                 icon="arrow-forward"
               />
 
