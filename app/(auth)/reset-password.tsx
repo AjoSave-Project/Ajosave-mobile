@@ -19,6 +19,7 @@ export default function ResetPasswordScreen() {
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
   const inputRefs = useRef<(TextInput | null)[]>([]);
@@ -47,7 +48,9 @@ export default function ResetPasswordScreen() {
   };
 
   const handleResend = async () => {
-    if (!canResend || !params.userId) return;
+    if (!canResend || !params.userId || isResending) return;
+    
+    setIsResending(true);
     try {
       const result = await AuthService.sendOtp(params.userId);
       setTimer(60);
@@ -56,6 +59,8 @@ export default function ResetPasswordScreen() {
       inputRefs.current[0]?.focus();
     } catch (error: any) {
       setSubmitError(getErrorMessage(error));
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -153,8 +158,13 @@ export default function ResetPasswordScreen() {
               <View style={styles.resendContainer}>
                 {!canResend ? (
                   <Text style={styles.timerText}>Resend code in {formatTime(timer)}</Text>
+                ) : isResending ? (
+                  <View style={styles.resendingContainer}>
+                    <ActivityIndicator size="small" color={Colors.primary.main} />
+                    <Text style={styles.resendingText}>Sending...</Text>
+                  </View>
                 ) : (
-                  <Pressable onPress={handleResend}>
+                  <Pressable onPress={handleResend} disabled={isResending}>
                     <Text style={styles.resendText}>Resend Code</Text>
                   </Pressable>
                 )}
@@ -250,6 +260,8 @@ const styles = StyleSheet.create({
   resendContainer: { alignItems: 'center', marginTop: Spacing.sm },
   timerText: { fontSize: 13, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600] },
   resendText: { fontSize: 13, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main, textDecorationLine: 'underline' },
+  resendingContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  resendingText: { fontSize: 13, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600] },
   passwordContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: Colors.neutral[200], paddingRight: Spacing.md },
   passwordInput: { flex: 1, paddingVertical: Spacing.md, paddingHorizontal: Spacing.md, fontSize: 16, fontFamily: Typography.fontFamily.medium, color: Colors.text.primary.light },
   inputError: { borderColor: '#ef4444' },

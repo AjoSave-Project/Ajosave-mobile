@@ -16,6 +16,7 @@ export default function VerifyOTPScreen() {
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   useEffect(() => {
@@ -42,7 +43,9 @@ export default function VerifyOTPScreen() {
   };
 
   const handleResend = async () => {
-    if (!canResend) return;
+    if (!canResend || isResending) return;
+    
+    setIsResending(true);
     try {
       const result = await AuthService.sendOtp(params.userId);
       setTimer(30);
@@ -52,6 +55,8 @@ export default function VerifyOTPScreen() {
       Alert.alert('Success', `Verification code sent to ${result.email || 'your email'}`);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to resend OTP');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -144,8 +149,13 @@ export default function VerifyOTPScreen() {
                 <View style={styles.resendContainer}>
                   {!canResend ? (
                     <Text style={styles.timerText}>Resend code in {formatTime(timer)}</Text>
+                  ) : isResending ? (
+                    <View style={styles.resendingContainer}>
+                      <ActivityIndicator size="small" color={Colors.primary.main} />
+                      <Text style={styles.resendingText}>Sending...</Text>
+                    </View>
                   ) : (
-                    <Pressable onPress={handleResend}>
+                    <Pressable onPress={handleResend} disabled={isResending}>
                       <Text style={styles.resendText}>Resend Code</Text>
                     </Pressable>
                   )}
@@ -202,6 +212,8 @@ const styles = StyleSheet.create({
   resendContainer: { marginTop: Spacing.md, alignItems: 'center' },
   timerText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600] },
   resendText: { fontSize: 14, fontFamily: Typography.fontFamily.semibold, color: Colors.primary.main, textDecorationLine: 'underline' },
+  resendingContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  resendingText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600] },
   devBanner: { backgroundColor: '#fefce8', borderWidth: 1, borderColor: '#fde047', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 },
   devBannerText: { fontSize: 12, fontFamily: Typography.fontFamily.semibold, color: '#854d0e', textAlign: 'center' },
   button: { backgroundColor: Colors.primary.main, paddingVertical: 20, paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
