@@ -287,6 +287,149 @@ class AuthServiceClass {
 
     throw new Error('Failed to get verification status');
   }
+
+  /**
+   * Verify face with BVN photo
+   */
+  async verifyFaceWithBVN(
+    userId: string,
+    bvn: string,
+    faceImageUri: string
+  ): Promise<{
+    verified: boolean;
+    message: string;
+    confidence?: number;
+    data?: {
+      verifiedAt: string;
+      matchScore: number;
+    };
+  }> {
+    try {
+      // Create form data
+      const formData = new FormData();
+      formData.append('userId', userId);
+      formData.append('bvn', bvn);
+      
+      // Add face image
+      const filename = faceImageUri.split('/').pop() || 'face.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      
+      formData.append('faceImage', {
+        uri: faceImageUri,
+        name: filename,
+        type,
+      } as any);
+
+      const response = await ApiService.post<{
+        verified: boolean;
+        message: string;
+        confidence?: number;
+        data?: any;
+      }>('/face/verify-bvn', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000, // 60 seconds
+      });
+
+      if (response.success && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.message || 'Face verification failed');
+    } catch (error: any) {
+      console.error('Face verification with BVN error:', error);
+      throw new Error(
+        error.message || 
+        'Failed to verify face with BVN. Please try again.'
+      );
+    }
+  }
+
+  /**
+   * Verify face with NIN photo
+   */
+  async verifyFaceWithNIN(
+    userId: string,
+    nin: string,
+    faceImageUri: string
+  ): Promise<{
+    verified: boolean;
+    message: string;
+    confidence?: number;
+    data?: {
+      verifiedAt: string;
+      matchScore: number;
+    };
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append('userId', userId);
+      formData.append('nin', nin);
+      
+      const filename = faceImageUri.split('/').pop() || 'face.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      
+      formData.append('faceImage', {
+        uri: faceImageUri,
+        name: filename,
+        type,
+      } as any);
+
+      const response = await ApiService.post<{
+        verified: boolean;
+        message: string;
+        confidence?: number;
+        data?: any;
+      }>('/face/verify-nin', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 60000,
+      });
+
+      if (response.success && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.message || 'Face verification failed');
+    } catch (error: any) {
+      console.error('Face verification with NIN error:', error);
+      throw new Error(
+        error.message || 
+        'Failed to verify face with NIN. Please try again.'
+      );
+    }
+  }
+
+  /**
+   * Get face verification status
+   */
+  async getFaceVerificationStatus(userId: string): Promise<{
+    isFaceVerified: boolean;
+    faceVerifiedAt?: string;
+  }> {
+    try {
+      const response = await ApiService.get<{
+        isFaceVerified: boolean;
+        faceVerifiedAt?: string;
+      }>(`/face/status/${userId}`);
+
+      if (response.success && response.data) {
+        return response.data;
+      }
+
+      throw new Error('Failed to get face verification status');
+    } catch (error: any) {
+      console.error('Get face verification status error:', error);
+      throw new Error(
+        error.message || 
+        'Failed to get face verification status'
+      );
+    }
+  }
 }
 
 export const AuthService = new AuthServiceClass();
