@@ -101,9 +101,9 @@ export default function VerifyContactScreen() {
       // Verify OTP with backend
       const result = await AuthService.verifyContactOtp(userId, otpCode);
       
-      // Navigate to BVN verification with verified contact info
+      // Navigate to consolidated KYC verification (BVN, NIN, DOB)
       router.push({
-        pathname: '/(auth)/verify-bvn',
+        pathname: '/(auth)/kyc-verify',
         params: { 
           email: params.email, 
           phoneNumber: params.phoneNumber,
@@ -154,7 +154,7 @@ export default function VerifyContactScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>Verify Email</Text>
-          <Text style={styles.subtitle}>Step 2 of 4: Email Verification</Text>
+          <Text style={styles.subtitle}>Step 2 of 3: Email Verification</Text>
           <Text style={styles.maskedEmail}>Code sent to {maskedEmail}</Text>
         </View>
       </View>

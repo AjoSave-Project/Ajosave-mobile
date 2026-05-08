@@ -128,7 +128,7 @@ export default function CreateAccountScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>Hello!</Text>
-          <Text style={styles.subtitle}>Step 1 of 4: Contact Information</Text>
+          <Text style={styles.subtitle}>Step 1 of 3: Contact Information</Text>
         </View>
       </View>
 

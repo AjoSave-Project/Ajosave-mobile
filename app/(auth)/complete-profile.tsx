@@ -147,7 +147,7 @@ export default function CompleteProfileScreen() {
 
           <View style={styles.header}>
             <Text style={styles.title}>Complete Profile</Text>
-            <Text style={styles.subtitle}>Final Step: Personal Information</Text>
+            <Text style={styles.subtitle}>Final Step: Create Your Account</Text>
           </View>
         </View>
 
@@ -217,6 +217,10 @@ export default function CompleteProfileScreen() {
                     </Pressable>
                   </View>
                 </Field>
+
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: '100%' }]} />
+                </View>
               </View>
 
               <View style={styles.buttonSection}>
@@ -296,6 +300,8 @@ const styles = StyleSheet.create({
   inputSection: { gap: Spacing.lg },
   infoBox: { backgroundColor: 'rgba(255,255,255,0.7)', padding: Spacing.md, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: Colors.primary.main },
   infoText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[700], lineHeight: 20 },
+  progressBar: { height: 4, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden', marginTop: Spacing.md },
+  progressFill: { height: '100%', backgroundColor: Colors.primary.main, borderRadius: 2 },
   buttonSection: { paddingTop: Spacing.lg },
   input: { backgroundColor: '#FFFFFF', paddingVertical: Spacing.md, paddingHorizontal: Spacing.md, borderRadius: 8, fontSize: 16, fontFamily: Typography.fontFamily.medium, color: Colors.text.primary.light, borderWidth: 1, borderColor: Colors.neutral[200] },
   inputError: { borderColor: '#ef4444' },

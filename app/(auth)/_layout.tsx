@@ -40,8 +40,6 @@ export default function AuthLayout() {
       <Stack.Screen name="signin" />
       <Stack.Screen name="create-account" />
       <Stack.Screen name="verify-contact" />
-      <Stack.Screen name="verify-bvn" />
-      <Stack.Screen name="verify-nin" />
       <Stack.Screen name="complete-profile" />
       <Stack.Screen name="verify-otp" />
       <Stack.Screen name="setup-biometric" />

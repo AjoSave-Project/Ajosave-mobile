@@ -1,146 +1,105 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
-  ScrollView, ActivityIndicator, Modal, Animated
+  ScrollView
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
-import { useAuth } from '@/contexts/AuthContext';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
-import { extractFieldErrors, getErrorMessage } from '@/utils/errors';
 import DateOfBirthInput from '@/components/DateOfBirthInput';
 
 export default function KYCVerifyScreen() {
-  const { signup, isLoading } = useAuth();
   const keyboardVisible = useKeyboardVisible();
 
-  // Basic info passed from create-account screen
+  // Contact info and userId passed from verify-contact screen
   const params = useLocalSearchParams<{
-    firstName: string;
-    lastName: string;
     email: string;
     phoneNumber: string;
-    password: string;
+    userId: string;
   }>();
 
-  const [step, setStep] = useState(1); // Step 1: BVN, Step 2: NIN + DOB
   const [bvn, setBvn] = useState('');
   const [nin, setNin] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
-  const [verifying, setVerifying] = useState(false);
-  const [verifyStep, setVerifyStep] = useState(0);
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  const verifySteps = [
-    'Validating BVN...',
-    'Validating NIN...',
-    'Cross-checking identity...',
-    'Finalising verification...',
-  ];
+  const [bvnVerified, setBvnVerified] = useState(false);
+  const [ninVerified, setNinVerified] = useState(false);
 
   useEffect(() => {
-    if (verifying) {
-      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-          Animated.timing(fadeAnim, { toValue: 0.8, duration: 600, useNativeDriver: true }),
-        ])
-      );
-      loop.start();
-      return () => loop.stop();
-    } else {
-      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-    }
-  }, [verifying]);
+    // Component mounted
+  }, []);
 
-  const validateStep1 = () => {
+  const validateForm = () => {
     const e: Record<string, string> = {};
     if (bvn.length !== 11) e.bvn = 'BVN must be 11 digits';
-    return e;
-  };
-
-  const validateStep2 = () => {
-    const e: Record<string, string> = {};
+    if (!bvnVerified) e.bvn = 'Please verify your BVN';
     if (nin.length !== 11) e.nin = 'NIN must be 11 digits';
+    if (!ninVerified) e.nin = 'Please verify your NIN';
     if (!dateOfBirth.trim()) e.dateOfBirth = 'Date of birth is required';
     return e;
   };
 
-  const handleNextStep = () => {
-    const newErrors = validateStep1();
+  const handleVerifyBVN = () => {
+    if (bvn.length !== 11) {
+      setErrors(prev => ({ ...prev, bvn: 'BVN must be 11 digits' }));
+      return;
+    }
+    
+    // Navigate to verification screen
+    router.push({
+      pathname: '/(auth)/verify-identity-field',
+      params: {
+        fieldType: 'bvn',
+        fieldValue: bvn,
+        userId: params.userId,
+      },
+    });
+  };
+
+  const handleVerifyNIN = () => {
+    if (nin.length !== 11) {
+      setErrors(prev => ({ ...prev, nin: 'NIN must be 11 digits' }));
+      return;
+    }
+    
+    // Navigate to verification screen
+    router.push({
+      pathname: '/(auth)/verify-identity-field',
+      params: {
+        fieldType: 'nin',
+        fieldValue: nin,
+        userId: params.userId,
+      },
+    });
+  };
+
+  const handleVerifyIdentity = () => {
+    const newErrors = validateForm();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    setErrors({});
-    setStep(2);
-  };
-
-  const handleBackStep = () => {
-    setErrors({});
-    setSubmitError('');
-    setStep(1);
-  };
-
-  const handleVerifyIdentity = async () => {
-    const newErrors = validateStep2();
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
     setSubmitError('');
 
-    // Simulate step-by-step verification before actual API call
-    setVerifying(true);
-    setVerifyStep(0);
-    for (let i = 0; i < verifySteps.length; i++) {
-      setVerifyStep(i);
-      await new Promise(res => setTimeout(res, 900));
-    }
-
-    try {
-      const result = await signup({
-        firstName: params.firstName,
-        lastName: params.lastName,
-        email: params.email,
+    // Navigate to complete-profile with all collected data
+    router.push({
+      pathname: '/(auth)/complete-profile',
+      params: { 
+        email: params.email, 
         phoneNumber: params.phoneNumber,
-        password: params.password,
+        userId: params.userId,
         bvn,
         nin,
-        dateOfBirth,
-      });
-      if (result && (result as any).requiresOtp) {
-        router.replace({
-          pathname: '/(auth)/verify-otp',
-          params: { 
-            userId: (result as any).userId, 
-            email: (result as any).email,
-            phoneNumber: (result as any).phoneNumber, 
-            purpose: 'signup', 
-          },
-        });
-      } else {
-        router.replace('/(auth)/setup-biometric');
-      }
-    } catch (error: any) {
-      setVerifying(false);
-      const fieldErrors = extractFieldErrors(error);
-      if (Object.keys(fieldErrors).length > 0) {
-        setErrors(prev => ({ ...prev, ...fieldErrors }));
-      }
-      setSubmitError(getErrorMessage(error));
-    }
+        dateOfBirth
+      },
+    });
   };
 
   return (
-    <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
@@ -156,81 +115,111 @@ export default function KYCVerifyScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>Verify Your Identity</Text>
-          <Text style={styles.subtitle}>Step {step} of 2: {step === 1 ? 'BVN Verification' : 'NIN Verification'}</Text>
+          <Text style={styles.subtitle}>Step 3 of 3: Identity Verification</Text>
         </View>
         </View>
 
         <View style={[styles.cardWrapper, { paddingBottom: keyboardVisible ? 300 : 80 }]}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <Ionicons name={step === 1 ? "card" : "shield-checkmark"} color="#ffffff" style={styles.avatarIcon} />
+              <Ionicons name="shield-checkmark" color="#ffffff" style={styles.avatarIcon} />
             </View>
           </View>
 
           <View style={styles.card}>
             <View style={styles.formContainer}>
-              {/* STEP 1: BVN VERIFICATION */}
-              {step === 1 && (
-                <View style={styles.inputSection}>
-                  <View style={styles.infoBox}>
-                    <Text style={styles.infoText}>
-                      Please provide your Bank Verification Number (BVN) to verify your identity.
-                    </Text>
-                  </View>
+              {/* SINGLE STEP: BVN, NIN & DOB */}
+              <View style={styles.inputSection}>
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoText}>
+                    Please provide your BVN, NIN, and date of birth to verify your identity.
+                  </Text>
+                </View>
 
-                  <Field label="BVN (11 digits)" error={errors.bvn}>
+                <Field label="BVN (11 digits)" error={errors.bvn}>
+                  <View style={styles.inputWithButton}>
                     <TextInput
-                      style={[styles.input, errors.bvn && styles.inputError]}
+                      style={[styles.inputFlex, errors.bvn && styles.inputError]}
                       placeholder="Enter your BVN"
                       placeholderTextColor={Colors.neutral[500]}
                       value={bvn}
-                      onChangeText={v => { setBvn(v.replace(/\D/g, '')); if (errors.bvn) setErrors(p => { const e = { ...p }; delete e.bvn; return e; }); }}
+                      onChangeText={v => { 
+                        setBvn(v.replace(/\D/g, '')); 
+                        setBvnVerified(false);
+                        if (errors.bvn) setErrors(p => { const e = { ...p }; delete e.bvn; return e; }); 
+                      }}
                       keyboardType="number-pad"
                       maxLength={11}
-                      editable={!isLoading}
                     />
-                  </Field>
-
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: '50%' }]} />
+                    <Pressable 
+                      style={[
+                        styles.verifyButton, 
+                        bvn.length === 11 && styles.verifyButtonActive,
+                        bvnVerified && styles.verifyButtonVerified
+                      ]}
+                      onPress={handleVerifyBVN}
+                      disabled={bvn.length !== 11 || bvnVerified}
+                    >
+                      {bvnVerified ? (
+                        <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                      ) : (
+                        <Ionicons 
+                          name="arrow-forward" 
+                          size={20} 
+                          color={bvn.length === 11 ? Colors.primary.main : Colors.neutral[400]} 
+                        />
+                      )}
+                    </Pressable>
                   </View>
-                </View>
-              )}
+                </Field>
 
-              {/* STEP 2: NIN VERIFICATION */}
-              {step === 2 && (
-                <View style={styles.inputSection}>
-                  <View style={styles.infoBox}>
-                    <Text style={styles.infoText}>
-                      Please provide your National Identification Number (NIN) and date of birth.
-                    </Text>
-                  </View>
-
-                  <Field label="NIN (11 digits)" error={errors.nin}>
+                <Field label="NIN (11 digits)" error={errors.nin}>
+                  <View style={styles.inputWithButton}>
                     <TextInput
-                      style={[styles.input, errors.nin && styles.inputError]}
+                      style={[styles.inputFlex, errors.nin && styles.inputError]}
                       placeholder="Enter your NIN"
                       placeholderTextColor={Colors.neutral[500]}
                       value={nin}
-                      onChangeText={v => { setNin(v.replace(/\D/g, '')); if (errors.nin) setErrors(p => { const e = { ...p }; delete e.nin; return e; }); }}
+                      onChangeText={v => { 
+                        setNin(v.replace(/\D/g, '')); 
+                        setNinVerified(false);
+                        if (errors.nin) setErrors(p => { const e = { ...p }; delete e.nin; return e; }); 
+                      }}
                       keyboardType="number-pad"
                       maxLength={11}
-                      editable={!isLoading}
                     />
-                  </Field>
-
-                  <DateOfBirthInput
-                    value={dateOfBirth}
-                    onChangeText={v => { setDateOfBirth(v); if (errors.dateOfBirth) setErrors(p => { const e = { ...p }; delete e.dateOfBirth; return e; }); }}
-                    error={errors.dateOfBirth}
-                    editable={!isLoading}
-                  />
-
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: '100%' }]} />
+                    <Pressable 
+                      style={[
+                        styles.verifyButton, 
+                        nin.length === 11 && styles.verifyButtonActive,
+                        ninVerified && styles.verifyButtonVerified
+                      ]}
+                      onPress={handleVerifyNIN}
+                      disabled={nin.length !== 11 || ninVerified}
+                    >
+                      {ninVerified ? (
+                        <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                      ) : (
+                        <Ionicons 
+                          name="arrow-forward" 
+                          size={20} 
+                          color={nin.length === 11 ? Colors.primary.main : Colors.neutral[400]} 
+                        />
+                      )}
+                    </Pressable>
                   </View>
+                </Field>
+
+                <DateOfBirthInput
+                  value={dateOfBirth}
+                  onChangeText={v => { setDateOfBirth(v); if (errors.dateOfBirth) setErrors(p => { const e = { ...p }; delete e.dateOfBirth; return e; }); }}
+                  error={errors.dateOfBirth}
+                />
+
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: '66%' }]} />
                 </View>
-              )}
+              </View>
 
               <View style={styles.buttonSection}>
                 {submitError ? (
@@ -239,51 +228,18 @@ export default function KYCVerifyScreen() {
                   </View>
                 ) : null}
 
-                <View style={styles.buttonRow}>
-                  {step === 2 && (
-                    <Pressable style={[styles.buttonSecondary, isLoading && styles.buttonDisabled]} onPress={handleBackStep} disabled={isLoading}>
-                      <Text style={styles.buttonSecondaryText}>← Back</Text>
-                    </Pressable>
-                  )}
-                  
-                  <Pressable 
-                    style={[styles.button, isLoading && styles.buttonDisabled, step === 2 && styles.buttonFlex]} 
-                    onPress={step === 1 ? handleNextStep : handleVerifyIdentity} 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? <ActivityIndicator color="#FFFFFF" /> : (
-                      <>
-                        <Text style={styles.buttonText}>{step === 1 ? 'Continue' : 'Verify & Continue'}</Text>
-                        <Text style={styles.arrow}>→</Text>
-                      </>
-                    )}
-                  </Pressable>
-                </View>
+                <Pressable 
+                  style={styles.button} 
+                  onPress={handleVerifyIdentity}
+                >
+                  <Text style={styles.buttonText}>Continue</Text>
+                  <Text style={styles.arrow}>→</Text>
+                </Pressable>
               </View>
             </View>
           </View>
         </View>
       </ScrollView>
-
-      {/* Verification overlay */}
-      <Modal transparent visible={verifying} animationType="none">
-        <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-          <View style={styles.verifyCard}>
-            <ActivityIndicator size="large" color={Colors.primary.main} style={{ marginBottom: 20 }} />
-            <Text style={styles.verifyTitle}>Verifying Identity</Text>
-            <Text style={styles.verifyStep}>{verifySteps[verifyStep]}</Text>
-            <View style={styles.stepDots}>
-              {verifySteps.map((_, i) => (
-                <View
-                  key={i}
-                  style={[styles.dot, i <= verifyStep && styles.dotActive]}
-                />
-              ))}
-            </View>
-          </View>
-        </Animated.View>
-      </Modal>
-    </>
   );
 }
 
@@ -327,21 +283,46 @@ const styles = StyleSheet.create({
   buttonSection: { paddingTop: Spacing.lg },
   input: { backgroundColor: '#FFFFFF', paddingVertical: Spacing.md, paddingHorizontal: Spacing.md, borderRadius: 8, fontSize: 16, fontFamily: Typography.fontFamily.medium, color: Colors.text.primary.light, borderWidth: 1, borderColor: Colors.neutral[200] },
   inputError: { borderColor: '#ef4444' },
+  inputWithButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8,
+  },
+  inputFlex: { 
+    flex: 1,
+    backgroundColor: '#FFFFFF', 
+    paddingVertical: Spacing.md, 
+    paddingHorizontal: Spacing.md, 
+    borderRadius: 8, 
+    fontSize: 16, 
+    fontFamily: Typography.fontFamily.medium, 
+    color: Colors.text.primary.light, 
+    borderWidth: 1, 
+    borderColor: Colors.neutral[200] 
+  },
+  verifyButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: Colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+  },
+  verifyButtonActive: {
+    backgroundColor: Colors.primary.light + '20',
+    borderColor: Colors.primary.main,
+  },
+  verifyButtonVerified: {
+    backgroundColor: '#10b981' + '20',
+    borderColor: '#10b981',
+  },
   buttonRow: { flexDirection: 'row', gap: Spacing.md },
   button: { flex: 1, backgroundColor: Colors.primary.main, paddingVertical: 20, paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  buttonFlex: { flex: 1 },
-  buttonSecondary: { flex: 1, backgroundColor: 'rgba(255,255,255,0.8)', paddingVertical: 20, paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.primary.main },
-  buttonSecondaryText: { color: Colors.primary.main, fontSize: 16, fontWeight: '600', fontFamily: Typography.fontFamily.semibold },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600', fontFamily: Typography.fontFamily.semibold },
   arrow: { color: '#FFFFFF', fontSize: 24, fontFamily: Typography.fontFamily.regular },
   errorBanner: { backgroundColor: '#fee2e2', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.md, borderLeftWidth: 4, borderLeftColor: '#ef4444' },
   errorBannerText: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: '#b91c1c' },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
-  verifyCard: { backgroundColor: '#fff', borderRadius: 20, padding: 36, alignItems: 'center', width: '78%', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 12 },
-  verifyTitle: { fontSize: 18, fontFamily: Typography.fontFamily.bold, color: Colors.primary.main, marginBottom: 8 },
-  verifyStep: { fontSize: 14, fontFamily: Typography.fontFamily.regular, color: Colors.neutral[600], marginBottom: 20, textAlign: 'center' },
-  stepDots: { flexDirection: 'row', gap: 8 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.neutral[300] },
-  dotActive: { backgroundColor: Colors.primary.main },
 });
