@@ -19,6 +19,8 @@ export default function VerifyIdentityFieldScreen() {
     fieldType: 'bvn' | 'nin';
     fieldValue: string;
     userId: string;
+    email?: string;
+    phoneNumber?: string;
   }>();
 
   const [verifying, setVerifying] = useState(true);
@@ -133,16 +135,20 @@ export default function VerifyIdentityFieldScreen() {
       duration: 200,
       useNativeDriver: true
     }).start(() => {
-      // Navigate back with result as query param
-      if (router.canGoBack()) {
-        router.setParams({
-          [`${params.fieldType}Verified`]: verificationResult?.success ? 'true' : 'false',
+      // Navigate back to kyc-verify with verification result
+      const verifiedParam = verificationResult?.success ? 'true' : 'false';
+      
+      router.replace({
+        pathname: '/(auth)/kyc-verify',
+        params: {
+          email: params.email || '',
+          phoneNumber: params.phoneNumber || '',
+          userId: params.userId,
+          [`${params.fieldType}Verified`]: verifiedParam,
+          [`${params.fieldType}Value`]: params.fieldValue,
           verificationTimestamp: Date.now().toString(),
-        });
-        router.back();
-      } else {
-        router.replace('/(auth)/kyc-verify');
-      }
+        },
+      });
     });
   };
 

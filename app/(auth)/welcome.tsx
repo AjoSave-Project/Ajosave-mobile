@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { router } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
@@ -13,24 +14,61 @@ import { Ionicons } from '@expo/vector-icons';
  * Features a split design with blue top section and white bottom section
  */
 export default function WelcomeScreen() {
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Create a slow, continuous bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -15,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [bounceAnim]);
   return (
     <View style={styles.container}>
       {/* Blue top section with semi-circles */}
       <View style={styles.topSection}>
         {/* Semi-circle 1 - solid */}
-        <LinearGradient
-          colors={['rgba(111, 142, 226, 0.2)', 'rgba(142, 219, 255, 0.4)']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.semiCircle1}
-        />
+        <Animated.View
+          style={[
+            styles.semiCircle1,
+            {
+              transform: [{ translateY: bounceAnim }],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['rgba(111, 142, 226, 0.2)', 'rgba(142, 219, 255, 0.4)']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={{ width: '100%', height: '100%', borderRadius: 255 }}
+          />
+        </Animated.View>
         {/* Semi-circle 2 - faded */}
-        <LinearGradient
-          colors={['#58b1ffff', Colors.primary.main]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.semiCircle2}
-        />
+        <Animated.View
+          style={[
+            styles.semiCircle2,
+            {
+              transform: [{ translateY: bounceAnim }],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['#58b1ffff', Colors.primary.main]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={{ width: '100%', height: '100%', borderRadius: 235 }}
+          />
+        </Animated.View>
         
         {/* AjoSave text */}
         <Text style={styles.brandName}>AjoSave</Text>

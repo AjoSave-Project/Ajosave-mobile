@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
-  ScrollView, Animated
+  ScrollView, Animated, Platform
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,15 +22,17 @@ export default function KYCVerifyScreen() {
     bvnVerified?: string;
     ninVerified?: string;
     verificationTimestamp?: string;
+    bvnValue?: string;
+    ninValue?: string;
   }>();
 
-  const [bvn, setBvn] = useState('');
-  const [nin, setNin] = useState('');
+  const [bvn, setBvn] = useState(params.bvnValue || '');
+  const [nin, setNin] = useState(params.ninValue || '');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
-  const [bvnVerified, setBvnVerified] = useState(false);
-  const [ninVerified, setNinVerified] = useState(false);
+  const [bvnVerified, setBvnVerified] = useState(params.bvnVerified === 'true');
+  const [ninVerified, setNinVerified] = useState(params.ninVerified === 'true');
 
   // Bounce animation
   const bounceAnim = React.useRef(new Animated.Value(0)).current;
@@ -94,9 +96,23 @@ export default function KYCVerifyScreen() {
     if (!bvnVerified) e.bvn = 'Please verify your BVN';
     if (nin.length !== 11) e.nin = 'NIN must be 11 digits';
     if (!ninVerified) e.nin = 'Please verify your NIN';
-    if (!dateOfBirth.trim()) e.dateOfBirth = 'Date of birth is required';
+    if (!dateOfBirth.trim() || dateOfBirth.length !== 10) e.dateOfBirth = 'Date of birth is required (YYYY-MM-DD)';
     return e;
   };
+
+  // Check if form is complete for button enable state
+  const isFormComplete = bvnVerified && ninVerified && dateOfBirth.length === 10;
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Form state:', {
+      bvnVerified,
+      ninVerified,
+      dateOfBirth,
+      dateOfBirthLength: dateOfBirth.length,
+      isFormComplete
+    });
+  }, [bvnVerified, ninVerified, dateOfBirth, isFormComplete]);
 
   const handleVerifyBVN = () => {
     if (bvn.length !== 11) {
@@ -111,6 +127,8 @@ export default function KYCVerifyScreen() {
         fieldType: 'bvn',
         fieldValue: bvn,
         userId: params.userId,
+        email: params.email,
+        phoneNumber: params.phoneNumber,
       },
     });
   };
@@ -128,6 +146,8 @@ export default function KYCVerifyScreen() {
         fieldType: 'nin',
         fieldValue: nin,
         userId: params.userId,
+        email: params.email,
+        phoneNumber: params.phoneNumber,
       },
     });
   };
@@ -160,8 +180,9 @@ export default function KYCVerifyScreen() {
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
-      bounces={false}
-      automaticallyAdjustKeyboardInsets
+      bounces={true}
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
     >
         <View style={styles.topSection}>
         <Pressable style={styles.backButton} onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/welcome')}>
@@ -298,10 +319,10 @@ export default function KYCVerifyScreen() {
                 <Pressable 
                   style={[
                     styles.button,
-                    (!bvnVerified || !ninVerified || !dateOfBirth.trim()) && styles.buttonDisabled
+                    !isFormComplete && styles.buttonDisabled
                   ]} 
                   onPress={handleVerifyIdentity}
-                  disabled={!bvnVerified || !ninVerified || !dateOfBirth.trim()}
+                  disabled={!isFormComplete}
                 >
                   <Text style={styles.buttonText}>Continue</Text>
                   <Text style={styles.arrow}>→</Text>

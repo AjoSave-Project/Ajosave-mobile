@@ -4,6 +4,7 @@ import { router, useRootNavigationState, useSegments } from 'expo-router';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
 import { useAuth } from '@/contexts';
+import { hasSeenOnboarding } from '@/utils/onboardingStorage';
 
 /**
  * Splash Screen
@@ -13,7 +14,8 @@ import { useAuth } from '@/contexts';
  * 2. Second splash (1.5s+): White background with primary "AjoSave" text animating up and loading spinner fading in
  * 
  * Then navigates to the appropriate screen based on:
- * - Authentication status (authenticated users go to home, unauthenticated users see onboarding)
+ * - Authentication status (authenticated users go to home)
+ * - Onboarding status (first-time users see onboarding, returning users see welcome)
  */
 export default function SplashScreen() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -22,6 +24,7 @@ export default function SplashScreen() {
   const [hasNavigated, setHasNavigated] = useState(false);
   const [showSecondSplash, setShowSecondSplash] = useState(false);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
   
   // Animation values
   const backgroundColorAnim = useRef(new Animated.Value(0)).current;
@@ -34,6 +37,17 @@ export default function SplashScreen() {
     rootNavigationState?.key && 
     rootNavigationState?.routeNames?.length > 0
   );
+
+  // Check if user has seen onboarding before
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      const hasSeen = await hasSeenOnboarding();
+      setOnboardingComplete(hasSeen);
+      console.log('[SplashScreen] Has seen onboarding:', hasSeen);
+    };
+    
+    checkOnboardingStatus();
+  }, []);
 
   // Timer for first splash screen (1.5 seconds)
   useEffect(() => {
@@ -93,7 +107,8 @@ export default function SplashScreen() {
     // 2. Both splash screens have been shown (minimum 3s total)
     // 3. Authentication loading is complete
     // 4. Navigation system is fully ready (has key AND route names)
-    if (!hasNavigated && minTimeElapsed && !isLoading && navigationReady) {
+    // 5. Onboarding status has been checked
+    if (!hasNavigated && minTimeElapsed && !isLoading && navigationReady && onboardingComplete !== null) {
       console.log('[SplashScreen] All conditions met, navigating...');
       setHasNavigated(true);
       
@@ -103,13 +118,18 @@ export default function SplashScreen() {
           console.log('[SplashScreen] User authenticated, going to tabs');
           router.replace('/(tabs)/home');
         } else {
-          // All unauthenticated users see onboarding
-          console.log('[SplashScreen] Unauthenticated user, going to onboarding');
-          router.replace('/(auth)/onboarding');
+          // Check if user has seen onboarding
+          if (onboardingComplete) {
+            console.log('[SplashScreen] Returning user, going to welcome');
+            router.replace('/(auth)/welcome');
+          } else {
+            console.log('[SplashScreen] First-time user, going to onboarding');
+            router.replace('/(auth)/onboarding');
+          }
         }
       }, 100);
     }
-  }, [isAuthenticated, isLoading, navigationReady, minTimeElapsed, segments, hasNavigated]);
+  }, [isAuthenticated, isLoading, navigationReady, minTimeElapsed, segments, hasNavigated, onboardingComplete]);
 
   // Interpolate background color
   const backgroundColor = backgroundColorAnim.interpolate({

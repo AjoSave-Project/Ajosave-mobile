@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, Animated } from 'react-native';
 import { router } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/spacing';
+import { setOnboardingComplete } from '@/utils/onboardingStorage';
 
 /**
  * Onboarding Screen
@@ -10,7 +12,35 @@ import { Spacing } from '@/constants/spacing';
  * Shows app introduction and value proposition with Phone.png illustration
  */
 export default function OnboardingScreen() {
-  const handleGetStarted = () => {
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Create a slow, continuous bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -15,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [bounceAnim]);
+
+  const handleGetStarted = async () => {
+    try {
+      // Mark that user has seen onboarding
+      await setOnboardingComplete();
+      console.log('[OnboardingScreen] Onboarding completed, flag set');
+    } catch (error) {
+      console.error('[OnboardingScreen] Error setting onboarding flag:', error);
+    }
+    
     router.push('/(auth)/welcome');
   };
 
@@ -18,9 +48,14 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       {/* Image Illustration */}
       <View style={styles.illustrationContainer}>
-        <Image 
+        <Animated.Image 
           source={require('@/assets/images/Phone.png')}
-          style={styles.image}
+          style={[
+            styles.image,
+            {
+              transform: [{ translateY: bounceAnim }],
+            },
+          ]}
           resizeMode="contain"
         />
       </View>

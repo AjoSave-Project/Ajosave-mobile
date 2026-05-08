@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator, Animated, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
@@ -101,8 +101,9 @@ export default function CreateAccountScreen() {
                     params: { email: status.email!, phoneNumber: status.phoneNumber! },
                   });
                 } else if (status.currentStep === 'bvn-verification') {
+                  // Email is verified, go to KYC verification
                   router.push({
-                    pathname: '/(auth)/verify-bvn',
+                    pathname: '/(auth)/kyc-verify',
                     params: { 
                       email: status.email!, 
                       phoneNumber: status.phoneNumber!,
@@ -136,8 +137,9 @@ export default function CreateAccountScreen() {
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
-      bounces={false}
-      automaticallyAdjustKeyboardInsets
+      bounces={true}
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
     >
       <View style={styles.topSection}>
         <Pressable 
