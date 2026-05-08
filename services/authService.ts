@@ -226,11 +226,15 @@ class AuthServiceClass {
       verifiedAt?: string;
     };
   }> {
+    console.log('[AuthService] Verifying BVN with:', { userId, bvn });
+    
     const response = await ApiService.post<{
       verified: boolean;
       message: string;
       data?: any;
     }>('/identity/verify-bvn', { userId, bvn });
+
+    console.log('[AuthService] BVN verification response:', response);
 
     if (response.success && response.data) {
       return response.data;

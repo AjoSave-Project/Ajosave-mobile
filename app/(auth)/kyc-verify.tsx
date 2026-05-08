@@ -58,30 +58,36 @@ export default function KYCVerifyScreen() {
   // Listen for screen focus to check verification results
   useFocusEffect(
     React.useCallback(() => {
-      // Check if BVN was verified
-      if (params.bvnVerified === 'true') {
-        setBvnVerified(true);
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.bvn;
-          return newErrors;
-        });
-      } else if (params.bvnVerified === 'false') {
-        setBvnVerified(false);
-        setErrors(prev => ({ ...prev, bvn: 'BVN verification failed. Please try again.' }));
+      console.log('Screen focused with params:', params);
+      
+      // Only update if verification status changed (not undefined)
+      if (params.bvnVerified !== undefined) {
+        if (params.bvnVerified === 'true') {
+          setBvnVerified(true);
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.bvn;
+            return newErrors;
+          });
+        } else if (params.bvnVerified === 'false') {
+          setBvnVerified(false);
+          setErrors(prev => ({ ...prev, bvn: 'BVN verification failed. Please try again.' }));
+        }
       }
 
-      // Check if NIN was verified
-      if (params.ninVerified === 'true') {
-        setNinVerified(true);
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.nin;
-          return newErrors;
-        });
-      } else if (params.ninVerified === 'false') {
-        setNinVerified(false);
-        setErrors(prev => ({ ...prev, nin: 'NIN verification failed. Please try again.' }));
+      // Only update if verification status changed (not undefined)
+      if (params.ninVerified !== undefined) {
+        if (params.ninVerified === 'true') {
+          setNinVerified(true);
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.nin;
+            return newErrors;
+          });
+        } else if (params.ninVerified === 'false') {
+          setNinVerified(false);
+          setErrors(prev => ({ ...prev, nin: 'NIN verification failed. Please try again.' }));
+        }
       }
       
       return () => {

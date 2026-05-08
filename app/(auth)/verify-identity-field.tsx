@@ -90,38 +90,54 @@ export default function VerifyIdentityFieldScreen() {
       console.log('Verification result:', result);
 
       if (result.verified) {
-        setVerificationResult({
+        const successResult = {
           success: true,
           message: result.message || `${params.fieldType.toUpperCase()} verified successfully!`
-        });
+        };
+        setVerificationResult(successResult);
+        
+        setVerifying(false);
+        setShowModal(true);
+
+        // Animate modal in
+        Animated.timing(modalFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true
+        }).start();
+
+        // Auto-dismiss after 2 seconds
+        setTimeout(() => {
+          handleDismiss(successResult);
+        }, 2000);
       } else {
-        setVerificationResult({
+        const failureResult = {
           success: false,
           message: result.message || `Unable to verify ${params.fieldType.toUpperCase()}. Please check the number and try again.`
-        });
+        };
+        setVerificationResult(failureResult);
+        
+        setVerifying(false);
+        setShowModal(true);
+
+        Animated.timing(modalFadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true
+        }).start();
+
+        setTimeout(() => {
+          handleDismiss(failureResult);
+        }, 2000);
       }
-
-      setVerifying(false);
-      setShowModal(true);
-
-      // Animate modal in
-      Animated.timing(modalFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true
-      }).start();
-
-      // Auto-dismiss after 2 seconds
-      setTimeout(() => {
-        handleDismiss();
-      }, 2000);
 
     } catch (error: any) {
       console.error('Verification error:', error);
-      setVerificationResult({
+      const errorResult = {
         success: false,
         message: error.message || 'Verification failed. Please try again.'
-      });
+      };
+      setVerificationResult(errorResult);
       setVerifying(false);
       setShowModal(true);
 
@@ -132,19 +148,30 @@ export default function VerifyIdentityFieldScreen() {
       }).start();
 
       setTimeout(() => {
-        handleDismiss();
+        handleDismiss(errorResult);
       }, 2500);
     }
   };
 
-  const handleDismiss = () => {
+  const handleDismiss = (result: { success: boolean; message: string }) => {
     Animated.timing(modalFadeAnim, {
       toValue: 0,
       duration: 200,
       useNativeDriver: true
     }).start(() => {
       // Navigate back to kyc-verify with verification result
-      const verifiedParam = verificationResult?.success ? 'true' : 'false';
+      console.log('handleDismiss - result:', result);
+      const verifiedParam = result.success ? 'true' : 'false';
+      console.log('handleDismiss - verifiedParam:', verifiedParam);
+      
+      console.log('Navigating back with params:', {
+        email: params.email,
+        phoneNumber: params.phoneNumber,
+        userId: params.userId,
+        [`${params.fieldType}Verified`]: verifiedParam,
+        [`${params.fieldType}Value`]: params.fieldValue,
+        verificationTimestamp: Date.now().toString(),
+      });
       
       router.replace({
         pathname: '/(auth)/kyc-verify',

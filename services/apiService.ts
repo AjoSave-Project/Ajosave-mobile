@@ -115,6 +115,9 @@ class ApiServiceClass {
    * POST request
    */
   async post<T>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
+    if (__DEV__) {
+      console.log(`[ApiService] POST ${endpoint}`, data);
+    }
     const url = this.buildUrl(endpoint);
     return this.request<T>('POST', url, data);
   }
