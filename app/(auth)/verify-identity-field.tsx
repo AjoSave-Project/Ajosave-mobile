@@ -21,6 +21,10 @@ export default function VerifyIdentityFieldScreen() {
     userId: string;
     email?: string;
     phoneNumber?: string;
+    bvnVerified?: string;
+    bvnValue?: string;
+    ninVerified?: string;
+    ninValue?: string;
   }>();
 
   const [verifying, setVerifying] = useState(true);
@@ -164,25 +168,33 @@ export default function VerifyIdentityFieldScreen() {
       const verifiedParam = result.success ? 'true' : 'false';
       console.log('handleDismiss - verifiedParam:', verifiedParam);
       
-      console.log('Navigating back with params:', {
-        email: params.email,
-        phoneNumber: params.phoneNumber,
+      // Preserve all existing params and add the new verification result
+      const navigationParams = {
+        email: params.email || '',
+        phoneNumber: params.phoneNumber || '',
         userId: params.userId,
         [`${params.fieldType}Verified`]: verifiedParam,
         [`${params.fieldType}Value`]: params.fieldValue,
         verificationTimestamp: Date.now().toString(),
-      });
+      };
+      
+      // If verifying NIN, preserve BVN params
+      if (params.fieldType === 'nin' && params.bvnVerified) {
+        navigationParams.bvnVerified = params.bvnVerified;
+        navigationParams.bvnValue = params.bvnValue || '';
+      }
+      
+      // If verifying BVN, preserve NIN params
+      if (params.fieldType === 'bvn' && params.ninVerified) {
+        navigationParams.ninVerified = params.ninVerified;
+        navigationParams.ninValue = params.ninValue || '';
+      }
+      
+      console.log('Navigating back with params:', navigationParams);
       
       router.replace({
         pathname: '/(auth)/kyc-verify',
-        params: {
-          email: params.email || '',
-          phoneNumber: params.phoneNumber || '',
-          userId: params.userId,
-          [`${params.fieldType}Verified`]: verifiedParam,
-          [`${params.fieldType}Value`]: params.fieldValue,
-          verificationTimestamp: Date.now().toString(),
-        },
+        params: navigationParams,
       });
     });
   };

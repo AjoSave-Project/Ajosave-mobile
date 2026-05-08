@@ -135,6 +135,11 @@ export default function KYCVerifyScreen() {
         userId: params.userId,
         email: params.email,
         phoneNumber: params.phoneNumber,
+        // Preserve NIN verification if it exists
+        ...(ninVerified && {
+          ninVerified: 'true',
+          ninValue: nin,
+        }),
       },
     });
   };
@@ -154,6 +159,11 @@ export default function KYCVerifyScreen() {
         userId: params.userId,
         email: params.email,
         phoneNumber: params.phoneNumber,
+        // Preserve BVN verification if it exists
+        ...(bvnVerified && {
+          bvnVerified: 'true',
+          bvnValue: bvn,
+        }),
       },
     });
   };
