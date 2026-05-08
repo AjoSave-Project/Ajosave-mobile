@@ -74,12 +74,20 @@ export default function VerifyIdentityFieldScreen() {
       // Call real API
       const { AuthService } = await import('@/services/authService');
       
+      console.log('Verifying with params:', {
+        userId: params.userId,
+        fieldType: params.fieldType,
+        fieldValue: params.fieldValue,
+      });
+      
       let result;
       if (params.fieldType === 'bvn') {
         result = await AuthService.verifyBVN(params.userId, params.fieldValue);
       } else {
         result = await AuthService.verifyNIN(params.userId, params.fieldValue);
       }
+
+      console.log('Verification result:', result);
 
       if (result.verified) {
         setVerificationResult({
