@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
@@ -22,6 +22,27 @@ export default function CreateAccountScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isChecking, setIsChecking] = useState(false);
+  
+  // Bounce animation
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Start bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -10,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   const update = (field: string, value: string) => {
     if (field === 'email') setEmail(value);
@@ -133,11 +154,11 @@ export default function CreateAccountScreen() {
       </View>
 
       <View style={[styles.cardWrapper, { paddingBottom: keyboardVisible ? 300 : 80 }]}>
-        <View style={styles.avatarContainer}>
+        <Animated.View style={[styles.avatarContainer, { transform: [{ translateY: bounceAnim }] }]}>
           <View style={styles.avatar}>
             <Ionicons name="mail" color="#ffffff" style={styles.avatarIcon} />
           </View>
-        </View>
+        </Animated.View>
 
         <View style={styles.card}>
           <View style={styles.formContainer}>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
@@ -25,9 +25,28 @@ export default function VerifyContactScreen() {
   const [userId, setUserId] = useState('');
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
+  // Bounce animation
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
   // Send initial OTP on mount
   useEffect(() => {
     sendInitialOtp();
+    
+    // Start bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -10,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
 
   // Timer countdown
@@ -160,11 +179,11 @@ export default function VerifyContactScreen() {
       </View>
 
       <View style={styles.cardWrapper}>
-        <View style={styles.avatarContainer}>
+        <Animated.View style={[styles.avatarContainer, { transform: [{ translateY: bounceAnim }] }]}>
           <View style={styles.avatar}>
             <Ionicons name="mail-open" color="#ffffff" style={styles.avatarIcon} />
           </View>
-        </View>
+        </Animated.View>
 
         <View style={styles.card}>
           <View style={styles.formContainer}>

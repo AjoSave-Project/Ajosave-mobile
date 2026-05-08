@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
-  ScrollView
+  ScrollView, Animated
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,27 @@ export default function KYCVerifyScreen() {
   const [submitError, setSubmitError] = useState('');
   const [bvnVerified, setBvnVerified] = useState(false);
   const [ninVerified, setNinVerified] = useState(false);
+
+  // Bounce animation
+  const bounceAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    // Start bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -10,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   // Listen for screen focus to check verification results
   useFocusEffect(
@@ -154,11 +175,11 @@ export default function KYCVerifyScreen() {
         </View>
 
         <View style={[styles.cardWrapper, { paddingBottom: keyboardVisible ? 300 : 80 }]}>
-          <View style={styles.avatarContainer}>
+          <Animated.View style={[styles.avatarContainer, { transform: [{ translateY: bounceAnim }] }]}>
             <View style={styles.avatar}>
               <Ionicons name="shield-checkmark" color="#ffffff" style={styles.avatarIcon} />
             </View>
-          </View>
+          </Animated.View>
 
           <View style={styles.card}>
             <View style={styles.formContainer}>

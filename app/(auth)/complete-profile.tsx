@@ -41,6 +41,7 @@ export default function CompleteProfileScreen() {
   const [verifyStep, setVerifyStep] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
 
   const verifySteps = [
     'Validating BVN...',
@@ -48,6 +49,24 @@ export default function CompleteProfileScreen() {
     'Cross-checking identity...',
     'Finalising verification...',
   ];
+
+  useEffect(() => {
+    // Start bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -10,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   useEffect(() => {
     if (verifying) {
@@ -152,11 +171,11 @@ export default function CompleteProfileScreen() {
         </View>
 
         <View style={[styles.cardWrapper, { paddingBottom: keyboardVisible ? 300 : 80 }]}>
-          <View style={styles.avatarContainer}>
+          <Animated.View style={[styles.avatarContainer, { transform: [{ translateY: bounceAnim }] }]}>
             <View style={styles.avatar}>
               <Ionicons name="person" color="#ffffff" style={styles.avatarIcon} />
             </View>
-          </View>
+          </Animated.View>
 
           <View style={styles.card}>
             <View style={styles.formContainer}>
