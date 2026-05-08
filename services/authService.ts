@@ -212,6 +212,81 @@ class AuthServiceClass {
     const response = await ApiService.post('/auth/reset-password', { userId, otp, newPassword });
     if (!response.success) throw new Error('Password reset failed');
   }
+
+  /**
+   * Verify BVN using Paystack
+   */
+  async verifyBVN(userId: string, bvn: string): Promise<{
+    verified: boolean;
+    message: string;
+    data?: {
+      bvn: string;
+      firstName?: string;
+      lastName?: string;
+      verifiedAt?: string;
+    };
+  }> {
+    const response = await ApiService.post<{
+      verified: boolean;
+      message: string;
+      data?: any;
+    }>('/identity/verify-bvn', { userId, bvn });
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || 'BVN verification failed');
+  }
+
+  /**
+   * Verify NIN
+   */
+  async verifyNIN(userId: string, nin: string): Promise<{
+    verified: boolean;
+    message: string;
+    data?: {
+      nin: string;
+      firstName?: string;
+      lastName?: string;
+      verifiedAt?: string;
+    };
+  }> {
+    const response = await ApiService.post<{
+      verified: boolean;
+      message: string;
+      data?: any;
+    }>('/identity/verify-nin', { userId, nin });
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || 'NIN verification failed');
+  }
+
+  /**
+   * Get verification status
+   */
+  async getVerificationStatus(userId: string): Promise<{
+    bvnVerified: boolean;
+    ninVerified: boolean;
+    bvnVerifiedAt?: string;
+    ninVerifiedAt?: string;
+  }> {
+    const response = await ApiService.get<{
+      bvnVerified: boolean;
+      ninVerified: boolean;
+      bvnVerifiedAt?: string;
+      ninVerifiedAt?: string;
+    }>(`/identity/status/${userId}`);
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    throw new Error('Failed to get verification status');
+  }
 }
 
 export const AuthService = new AuthServiceClass();

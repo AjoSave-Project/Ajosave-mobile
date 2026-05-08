@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable,
   ScrollView
@@ -19,6 +19,9 @@ export default function KYCVerifyScreen() {
     email: string;
     phoneNumber: string;
     userId: string;
+    bvnVerified?: string;
+    ninVerified?: string;
+    verificationTimestamp?: string;
   }>();
 
   const [bvn, setBvn] = useState('');
@@ -29,9 +32,40 @@ export default function KYCVerifyScreen() {
   const [bvnVerified, setBvnVerified] = useState(false);
   const [ninVerified, setNinVerified] = useState(false);
 
-  useEffect(() => {
-    // Component mounted
-  }, []);
+  // Listen for screen focus to check verification results
+  useFocusEffect(
+    React.useCallback(() => {
+      // Check if BVN was verified
+      if (params.bvnVerified === 'true') {
+        setBvnVerified(true);
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.bvn;
+          return newErrors;
+        });
+      } else if (params.bvnVerified === 'false') {
+        setBvnVerified(false);
+        setErrors(prev => ({ ...prev, bvn: 'BVN verification failed. Please try again.' }));
+      }
+
+      // Check if NIN was verified
+      if (params.ninVerified === 'true') {
+        setNinVerified(true);
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.nin;
+          return newErrors;
+        });
+      } else if (params.ninVerified === 'false') {
+        setNinVerified(false);
+        setErrors(prev => ({ ...prev, nin: 'NIN verification failed. Please try again.' }));
+      }
+      
+      return () => {
+        // Cleanup if needed
+      };
+    }, [params.bvnVerified, params.ninVerified, params.verificationTimestamp])
+  );
 
   const validateForm = () => {
     const e: Record<string, string> = {};
@@ -171,6 +205,12 @@ export default function KYCVerifyScreen() {
                       )}
                     </Pressable>
                   </View>
+                  {bvnVerified && (
+                    <View style={styles.verifiedBadge}>
+                      <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+                      <Text style={styles.verifiedText}>Verified</Text>
+                    </View>
+                  )}
                 </Field>
 
                 <Field label="NIN (11 digits)" error={errors.nin}>
@@ -208,6 +248,12 @@ export default function KYCVerifyScreen() {
                       )}
                     </Pressable>
                   </View>
+                  {ninVerified && (
+                    <View style={styles.verifiedBadge}>
+                      <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+                      <Text style={styles.verifiedText}>Verified</Text>
+                    </View>
+                  )}
                 </Field>
 
                 <DateOfBirthInput
@@ -229,8 +275,12 @@ export default function KYCVerifyScreen() {
                 ) : null}
 
                 <Pressable 
-                  style={styles.button} 
+                  style={[
+                    styles.button,
+                    (!bvnVerified || !ninVerified || !dateOfBirth.trim()) && styles.buttonDisabled
+                  ]} 
                   onPress={handleVerifyIdentity}
+                  disabled={!bvnVerified || !ninVerified || !dateOfBirth.trim()}
                 >
                   <Text style={styles.buttonText}>Continue</Text>
                   <Text style={styles.arrow}>→</Text>
@@ -247,7 +297,9 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   return (
     <View style={{ gap: 4 }}>
       <Text style={fieldStyles.label}>{label}</Text>
-      {children}
+      <View>
+        {children}
+      </View>
       {error && <Text style={fieldStyles.error}>{error}</Text>}
     </View>
   );
@@ -317,6 +369,18 @@ const styles = StyleSheet.create({
   verifyButtonVerified: {
     backgroundColor: '#10b981' + '20',
     borderColor: '#10b981',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    marginLeft: Spacing.xs,
+  },
+  verifiedText: {
+    fontSize: 12,
+    fontFamily: Typography.fontFamily.medium,
+    color: '#10b981',
   },
   buttonRow: { flexDirection: 'row', gap: Spacing.md },
   button: { flex: 1, backgroundColor: Colors.primary.main, paddingVertical: 20, paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

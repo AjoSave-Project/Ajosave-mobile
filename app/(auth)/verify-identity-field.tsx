@@ -69,25 +69,25 @@ export default function VerifyIdentityFieldScreen() {
         await new Promise(res => setTimeout(res, 1200));
       }
 
-      // TODO: Replace with actual API call
-      // const response = await AuthService.verifyIdentityField(
-      //   params.userId,
-      //   params.fieldType,
-      //   params.fieldValue
-      // );
-
-      // Simulate API response
-      const mockSuccess = Math.random() > 0.3; // 70% success rate for demo
+      // Call real API
+      const { AuthService } = await import('@/services/authService');
       
-      if (mockSuccess) {
+      let result;
+      if (params.fieldType === 'bvn') {
+        result = await AuthService.verifyBVN(params.userId, params.fieldValue);
+      } else {
+        result = await AuthService.verifyNIN(params.userId, params.fieldValue);
+      }
+
+      if (result.verified) {
         setVerificationResult({
           success: true,
-          message: `${params.fieldType.toUpperCase()} verified successfully!`
+          message: result.message || `${params.fieldType.toUpperCase()} verified successfully!`
         });
       } else {
         setVerificationResult({
           success: false,
-          message: `Unable to verify ${params.fieldType.toUpperCase()}. Please check the number and try again.`
+          message: result.message || `Unable to verify ${params.fieldType.toUpperCase()}. Please check the number and try again.`
         });
       }
 
@@ -107,6 +107,7 @@ export default function VerifyIdentityFieldScreen() {
       }, 2000);
 
     } catch (error: any) {
+      console.error('Verification error:', error);
       setVerificationResult({
         success: false,
         message: error.message || 'Verification failed. Please try again.'
@@ -132,8 +133,12 @@ export default function VerifyIdentityFieldScreen() {
       duration: 200,
       useNativeDriver: true
     }).start(() => {
-      // Navigate back with result
+      // Navigate back with result as query param
       if (router.canGoBack()) {
+        router.setParams({
+          [`${params.fieldType}Verified`]: verificationResult?.success ? 'true' : 'false',
+          verificationTimestamp: Date.now().toString(),
+        });
         router.back();
       } else {
         router.replace('/(auth)/kyc-verify');
