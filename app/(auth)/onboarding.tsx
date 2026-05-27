@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, Animated, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,8 +13,6 @@ import { setOnboardingComplete } from '@/utils/onboardingStorage';
  * Interactive onboarding with multiple screens and language toggle
  * to make users feel welcome and understand the app's value
  */
-
-type Language = 'pidgin' | 'english';
 
 interface OnboardingStep {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -261,18 +259,17 @@ export default function OnboardingScreen() {
         </Animated.View>
 
         {/* Navigation Buttons */}
-        <View style={styles.navigationContainer}>
+        <View style={styles.welcomeNavigationContainer}>
           {/* Next Button */}
           <Pressable style={styles.welcomeNextButton} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>Next</Text>
-            <Ionicons name="arrow-forward" size={20} color={Colors.primary.main} />
+            <Ionicons name="arrow-forward" size={24} color={Colors.primary.main} />
+          </Pressable>
+          
+          {/* Skip Button */}
+          <Pressable style={styles.welcomeSkipButton} onPress={handleComplete}>
+            <Text style={styles.skipButtonTextWhite}>Skip</Text>
           </Pressable>
         </View>
-
-        {/* Skip Button */}
-        <Pressable style={styles.skipButton} onPress={handleComplete}>
-          <Text style={styles.skipButtonTextWhite}>Skip</Text>
-        </Pressable>
       </View>
     );
   }
@@ -492,19 +489,22 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   welcomeNextButton: {
-    flex: 1,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  welcomeNavigationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 18,
-    borderRadius: 28,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    justifyContent: 'space-between',
+    marginTop: Spacing.xl,
+  },
+  welcomeSkipButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
   },
   nextButtonText: {
     color: '#FFFFFF',

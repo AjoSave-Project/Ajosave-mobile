@@ -41,8 +41,7 @@ export default function SplashScreen() {
   // Check if user has seen onboarding before
   useEffect(() => {
     const checkOnboardingStatus = async () => {
-      // TEMPORARY: Always return false to work on onboarding UI
-      const hasSeen = false; // await hasSeenOnboarding();
+      const hasSeen = await hasSeenOnboarding();
       setOnboardingComplete(hasSeen);
       console.log('[SplashScreen] Has seen onboarding:', hasSeen);
     };

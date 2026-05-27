@@ -9,7 +9,7 @@ import { AuthService } from '@/services/authService';
 import { getErrorMessage } from '@/utils/errors';
 
 export default function ResetPasswordScreen() {
-  const params = useLocalSearchParams<{ userId: string; email: string; phoneNumber: string }>();
+  const params = useLocalSearchParams<{ userId: string; email: string; phoneNumber: string; method?: string }>();
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
@@ -99,9 +99,12 @@ export default function ResetPasswordScreen() {
     }
   };
 
-  const maskedEmail = params.email
-    ? params.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
-    : 'your email';
+  const maskedPhone = params.phoneNumber
+    ? params.phoneNumber.replace(/(\+\d{1,3})(\d{3})(\d+)(\d{4})/, '$1***$4')
+    : 'your phone';
+
+  const deliveryMethod = params.method || 'sms';
+  const deliveryTarget = deliveryMethod === 'sms' ? maskedPhone : 'your email';
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
@@ -120,7 +123,7 @@ export default function ResetPasswordScreen() {
         </Pressable>
         <View style={styles.header}>
           <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>Enter the code sent to {maskedEmail} and choose a new password</Text>
+          <Text style={styles.subtitle}>Enter the code sent to {deliveryTarget} and choose a new password</Text>
         </View>
       </View>
 

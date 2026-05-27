@@ -33,6 +33,7 @@ export default function ForgotPasswordScreen() {
           userId: result.userId ?? '',
           email: result.email ?? '',
           phoneNumber: result.phoneNumber ?? phoneNumber,
+          method: result.method ?? 'sms', // Pass delivery method
         },
       });
     } catch (error: any) {
@@ -57,7 +58,7 @@ export default function ForgotPasswordScreen() {
         </Pressable>
         <View style={styles.header}>
           <Text style={styles.title}>Forgot Password?</Text>
-          <Text style={styles.subtitle}>Enter your phone number and we'll send you a reset code</Text>
+          <Text style={styles.subtitle}>Enter your phone number and we'll send you a verification code</Text>
         </View>
       </View>
 
@@ -88,7 +89,7 @@ export default function ForgotPasswordScreen() {
               <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleSend} disabled={isLoading}>
                 {isLoading ? <ActivityIndicator color="#FFFFFF" /> : (
                   <>
-                    <Text style={styles.buttonText}>Send Reset Code</Text>
+                    <Text style={styles.buttonText}>Send Verification Code</Text>
                     <Text style={styles.arrow}>→</Text>
                   </>
                 )}
