@@ -8,30 +8,50 @@ import { Spacing } from '@/constants/spacing';
 import { AuthService } from '@/services/authService';
 import { getErrorMessage } from '@/utils/errors';
 import PhoneInput from '@/components/PhoneInput';
+import EmailInput from '@/components/EmailInput';
 
 export default function ForgotPasswordScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSend = async () => {
+    // Validate inputs
+    let hasErrors = false;
+    
     if (!phoneNumber.trim()) {
       setPhoneError('Phone number is required');
-      return;
+      hasErrors = true;
+    } else {
+      setPhoneError('');
     }
-    setPhoneError('');
+    
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      hasErrors = true;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('Please enter a valid email address');
+      hasErrors = true;
+    } else {
+      setEmailError('');
+    }
+    
+    if (hasErrors) return;
+    
     setSubmitError('');
     setIsLoading(true);
     try {
-      const result = await AuthService.forgotPassword(phoneNumber);
+      const result = await AuthService.forgotPassword(phoneNumber, email);
       // If no userId returned, the phone wasn't found — but we still navigate
       // to avoid leaking whether the number exists
       router.push({
         pathname: '/(auth)/reset-password',
         params: {
           userId: result.userId ?? '',
-          email: result.email ?? '',
+          email: result.email ?? email,
           phoneNumber: result.phoneNumber ?? phoneNumber,
           method: result.method ?? 'sms', // Pass delivery method
         },
@@ -58,7 +78,7 @@ export default function ForgotPasswordScreen() {
         </Pressable>
         <View style={styles.header}>
           <Text style={styles.title}>Forgot Password?</Text>
-          <Text style={styles.subtitle}>Enter your phone number and we'll send you a verification code</Text>
+          <Text style={styles.subtitle}>Enter your phone number and email to receive a verification code</Text>
         </View>
       </View>
 
@@ -74,9 +94,17 @@ export default function ForgotPasswordScreen() {
             <View style={styles.inputSection}>
               <PhoneInput
                 value={phoneNumber}
-                onChangeText={v => { setPhoneNumber(v); setPhoneError(''); setSubmitError(''); }}
+                onChangeText={(v: string) => { setPhoneNumber(v); setPhoneError(''); setSubmitError(''); }}
                 error={phoneError}
                 editable={!isLoading}
+              />
+              
+              <EmailInput
+                value={email}
+                onChangeText={(v: string) => { setEmail(v); setEmailError(''); setSubmitError(''); }}
+                error={emailError}
+                editable={!isLoading}
+                placeholder="Enter your email address"
               />
             </View>
 

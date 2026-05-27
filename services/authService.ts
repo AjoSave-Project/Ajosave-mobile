@@ -202,8 +202,13 @@ class AuthServiceClass {
     }
   }
 
-  async forgotPassword(phoneNumber: string): Promise<{ userId?: string; email?: string; phoneNumber?: string; method?: string }> {
-    const response = await ApiService.post<{ userId?: string; email?: string; phoneNumber?: string; method?: string }>('/auth/forgot-password', { phoneNumber });
+  async forgotPassword(phoneNumber: string, email?: string): Promise<{ userId?: string; email?: string; phoneNumber?: string; method?: string }> {
+    const payload: any = { phoneNumber };
+    if (email) {
+      payload.email = email;
+    }
+    
+    const response = await ApiService.post<{ userId?: string; email?: string; phoneNumber?: string; method?: string }>('/auth/forgot-password', payload);
     if (response.success) return response.data ?? {};
     throw new Error('Failed to send reset OTP');
   }
