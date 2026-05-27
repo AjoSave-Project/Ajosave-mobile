@@ -107,7 +107,55 @@ export default function KYCVerifyScreen() {
   };
 
   // Check if form is complete for button enable state
-  const isFormComplete = bvnVerified && ninVerified && dateOfBirth.length === 10;
+  const isDateValid = React.useMemo(() => {
+    if (dateOfBirth.length !== 10) return false;
+    
+    const parts = dateOfBirth.split('-');
+    if (parts.length !== 3) return false;
+    
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return false;
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    
+    // Check if date is valid
+    const date = new Date(year, month - 1, day);
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      return false;
+    }
+    
+    // Check if user is at least 18 years old
+    const today = new Date();
+    const eighteenYearsAgo = new Date(
+      today.getFullYear() - 18,
+      today.getMonth(),
+      today.getDate()
+    );
+    
+    if (date > eighteenYearsAgo) return false;
+    if (date > today) return false;
+    
+    // Check if user is not older than 90 years
+    const ninetyYearsAgo = new Date(
+      today.getFullYear() - 90,
+      today.getMonth(),
+      today.getDate()
+    );
+    
+    if (date < ninetyYearsAgo) return false;
+    if (year < 1900) return false;
+    
+    return true;
+  }, [dateOfBirth]);
+  
+  const isFormComplete = bvnVerified && ninVerified && isDateValid;
 
   // Debug logging
   React.useEffect(() => {
@@ -119,6 +167,10 @@ export default function KYCVerifyScreen() {
       isFormComplete
     });
   }, [bvnVerified, ninVerified, dateOfBirth, isFormComplete]);
+
+  // Prevent unnecessary re-renders
+  const handleVerifyBVNMemo = React.useCallback(handleVerifyBVN, [bvn, params.userId, params.email, params.phoneNumber, ninVerified, nin]);
+  const handleVerifyNINMemo = React.useCallback(handleVerifyNIN, [nin, params.userId, params.email, params.phoneNumber, bvnVerified, bvn]);
 
   const handleVerifyBVN = () => {
     if (bvn.length !== 11) {

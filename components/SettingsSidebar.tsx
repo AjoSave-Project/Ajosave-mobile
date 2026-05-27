@@ -31,6 +31,7 @@ export function SettingsSidebar({ visible, onClose }: SettingsSidebarProps) {
         text: 'Log Out', style: 'destructive', onPress: async () => {
           onClose();
           await logout();
+          router.replace('/(auth)/signin');
         }
       },
     ]);

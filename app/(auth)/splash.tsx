@@ -41,7 +41,8 @@ export default function SplashScreen() {
   // Check if user has seen onboarding before
   useEffect(() => {
     const checkOnboardingStatus = async () => {
-      const hasSeen = await hasSeenOnboarding();
+      // TEMPORARY: Always return false to work on onboarding UI
+      const hasSeen = false; // await hasSeenOnboarding();
       setOnboardingComplete(hasSeen);
       console.log('[SplashScreen] Has seen onboarding:', hasSeen);
     };
@@ -110,22 +111,21 @@ export default function SplashScreen() {
     // 5. Onboarding status has been checked
     if (!hasNavigated && minTimeElapsed && !isLoading && navigationReady && onboardingComplete !== null) {
       console.log('[SplashScreen] All conditions met, navigating...');
+      console.log('[SplashScreen] isAuthenticated:', isAuthenticated);
+      console.log('[SplashScreen] onboardingComplete:', onboardingComplete);
       setHasNavigated(true);
       
       // Use setTimeout to ensure navigation happens after current render cycle
       setTimeout(() => {
         if (isAuthenticated) {
-          console.log('[SplashScreen] User authenticated, going to tabs');
+          console.log('[SplashScreen] User authenticated, going to home');
           router.replace('/(tabs)/home');
+        } else if (onboardingComplete) {
+          console.log('[SplashScreen] Returning user (not authenticated), going to signin');
+          router.replace('/(auth)/signin');
         } else {
-          // Check if user has seen onboarding
-          if (onboardingComplete) {
-            console.log('[SplashScreen] Returning user, going to welcome');
-            router.replace('/(auth)/welcome');
-          } else {
-            console.log('[SplashScreen] First-time user, going to onboarding');
-            router.replace('/(auth)/onboarding');
-          }
+          console.log('[SplashScreen] First-time user, going to onboarding');
+          router.replace('/(auth)/onboarding');
         }
       }, 100);
     }

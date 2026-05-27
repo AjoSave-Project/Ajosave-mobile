@@ -88,9 +88,10 @@ export default function CompleteProfileScreen() {
     const e: Record<string, string> = {};
     if (!firstName.trim()) e.firstName = 'First name is required';
     if (!lastName.trim()) e.lastName = 'Last name is required';
-    if (password.length < 8) e.password = 'Password must be at least 8 characters';
-    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-      e.password = 'Must include uppercase, lowercase, and a number';
+    if (password.length < 8) {
+      e.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=\[\]{};':"\\|,.<>\/])/.test(password)) {
+      e.password = 'Must include uppercase, lowercase, number, and special character';
     }
     return e;
   };
@@ -123,19 +124,8 @@ export default function CompleteProfileScreen() {
         dateOfBirth: params.dateOfBirth,
       });
 
-      if (result && (result as any).requiresOtp) {
-        router.replace({
-          pathname: '/(auth)/verify-otp',
-          params: {
-            userId: (result as any).userId,
-            email: (result as any).email,
-            phoneNumber: (result as any).phoneNumber,
-            purpose: 'signup',
-          },
-        });
-      } else {
-        router.replace('/(auth)/setup-biometric');
-      }
+      // Registration successful - go to biometric setup
+      router.replace('/(auth)/setup-biometric');
     } catch (error: any) {
       setVerifying(false);
       const fieldErrors = extractFieldErrors(error);
@@ -215,7 +205,7 @@ export default function CompleteProfileScreen() {
                   />
                 </Field>
 
-                <Field label="Password" error={errors.password} hint="Min 8 chars with uppercase, lowercase, and number">
+                <Field label="Password" error={errors.password} hint="Min 8 chars with uppercase, lowercase, number, and special character">
                   <View style={[styles.passwordContainer, errors.password && styles.inputError]}>
                     <TextInput
                       style={styles.passwordInput}

@@ -34,6 +34,7 @@ export default function VerifyIdentityFieldScreen() {
     success: boolean;
     message: string;
   } | null>(null);
+  const hasStartedVerification = useRef(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const modalFadeAnim = useRef(new Animated.Value(0)).current;
@@ -43,6 +44,12 @@ export default function VerifyIdentityFieldScreen() {
     : ['Connecting to NIMC...', 'Validating NIN...', 'Verifying identity...'];
 
   useEffect(() => {
+    // Prevent multiple verification attempts
+    if (hasStartedVerification.current) {
+      return;
+    }
+    hasStartedVerification.current = true;
+
     // Start fade-in animation
     Animated.timing(fadeAnim, { 
       toValue: 1, 
