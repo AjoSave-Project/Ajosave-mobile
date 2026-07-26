@@ -185,9 +185,9 @@ export default function HomeScreen() {
             {quickActions.map((action) => {
               const itemWidth = (width - (Spacing.lg * 2) - (Spacing.sm * 3)) / 4;
               return (
-                <Pressable 
-                  key={action.label} 
-                  style={[styles.actionButton, { width: itemWidth }]} 
+                <Pressable
+                  key={action.label}
+                  style={[styles.actionButton, { width: itemWidth }]}
                   onPress={action.onPress}
                 >
                   <View style={styles.actionIconContainer}>
