@@ -24,7 +24,7 @@ import { ApiService } from '@/services/apiService';
 
 // Set base URL immediately (synchronous) so it's ready before any provider mounts
 const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
-const fallbackUrl = 'https://ajosave-backend.vercel.app/api';
+const fallbackUrl = 'https://172.20.10.2:5000/api';
 ApiService.setBaseUrl(apiUrl);
 ApiService.setFallbackUrl(fallbackUrl);
 
