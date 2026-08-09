@@ -71,12 +71,8 @@ export default function HomeScreen() {
   const quickActions = [
     { icon: 'people-outline', label: 'Create Group', onPress: () => router.push('/create-group') },
     { icon: 'enter-outline', label: 'Join Group', onPress: () => router.push('/join-group') },
-    { icon: 'card-outline', label: 'Make Payment', onPress: () => router.push('/(tabs)/pay') },
-    { icon: 'wallet-outline', label: 'Wallet', onPress: () => router.push('/(tabs)/wallet') },
     { icon: 'business-outline', label: 'Add Bank', onPress: () => router.push('/add-bank-account') },
-    { icon: 'grid-outline', label: 'My Groups', onPress: () => router.push('/(tabs)/groups') },
     { icon: 'list-outline', label: 'Transactions', onPress: () => router.push('/(tabs)/wallet') },
-    { icon: 'chatbubble-ellipses-outline', label: 'Group Chat', onPress: () => router.push('/(tabs)/chats') },
   ];
 
   return (
@@ -85,65 +81,68 @@ export default function HomeScreen() {
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Balance Card */}
-        <View style={styles.balanceCard}>
-          <View style={styles.balanceCardTop}>
-            <View style={styles.balanceCardLeft}>
-              <View style={styles.balanceRow}>
-                {isLoading && !wallet ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.balanceAmount}>
-                    {balanceVisible ? formatCurrency(wallet?.totalBalance ?? 0) : '₦ *****'}
-                  </Text>
-                )}
-                <Pressable onPress={() => setBalanceVisible(!balanceVisible)} style={styles.eyeButton}>
-                  <Ionicons name={balanceVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color="rgba(255,255,255,0.8)" />
-                </Pressable>
-              </View>
-            </View>
-            <View style={styles.balanceCardRight}>
-              <Text style={styles.activeGroupsLabel}>Active Groups</Text>
-              <Text style={styles.activeGroupsCount}>{activeGroups.length}</Text>
-              {pendingGroups.length > 0 && (
-                <Text style={styles.pendingGroupsText}>{pendingGroups.length} pending</Text>
-              )}
-            </View>
-          </View>
+{/* Home Page - Balance Card */}
+<View style={styles.balanceCard}>
+  <View style={styles.balanceCardTop}>
+    <View style={styles.balanceCardLeft}>
+      {/* Available Balance Header Added */}
+      <Text style={styles.balanceCardLabel}>Available Balance</Text>
+      
+      <View style={styles.balanceRow}>
+        {isLoading && !wallet ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.balanceAmount}>
+            {balanceVisible ? formatCurrency(wallet?.totalBalance ?? 0) : '₦ *****'}
+          </Text>
+        )}
+        <Pressable onPress={() => setBalanceVisible(!balanceVisible)} style={styles.eyeButton}>
+          <Ionicons name={balanceVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color="rgba(255,255,255,0.8)" />
+        </Pressable>
+      </View>
+    </View>
+    <View style={styles.balanceCardRight}>
+      <Text style={styles.activeGroupsLabel}>Active Groups</Text>
+      <Text style={styles.activeGroupsCount}>{activeGroups.length}</Text>
+      {pendingGroups.length > 0 && (
+        <Text style={styles.pendingGroupsText}>{pendingGroups.length} pending</Text>
+      )}
+    </View>
+  </View>
 
-          {/* 4-stat grid - responsive layout */}
-          <View style={styles.balanceStats}>
-            {[
-              { label: 'Locked', value: wallet?.lockedBalance ?? 0 },
-              { label: 'Contributed', value: wallet?.totalContributions ?? 0 },
-              { label: 'Received', value: wallet?.totalPayouts ?? 0 },
-            ].map((stat, i) => (
-              <View key={stat.label} style={[styles.balanceStat, i > 0 && styles.balanceStatBorder]}>
-                <Text style={styles.balanceStatLabel}>{stat.label}</Text>
-                <Text style={styles.balanceStatValue} numberOfLines={1}>
-                  {balanceVisible ? formatCurrency(stat.value) : '*****'}
-                </Text>
-              </View>
-            ))}
-          </View>
+  {/* 4-stat grid - responsive layout */}
+  <View style={styles.balanceStats}>
+    {[
+      { label: 'Locked', value: wallet?.lockedBalance ?? 0 },
+      { label: 'Contributed', value: wallet?.totalContributions ?? 0 },
+      { label: 'Received', value: wallet?.totalPayouts ?? 0 },
+    ].map((stat, i) => (
+      <View key={stat.label} style={[styles.balanceStat, i > 0 && styles.balanceStatBorder]}>
+        <Text style={styles.balanceStatLabel}>{stat.label}</Text>
+        <Text style={styles.balanceStatValue} numberOfLines={1}>
+          {balanceVisible ? formatCurrency(stat.value) : '*****'}
+        </Text>
+      </View>
+    ))}
+  </View>
 
-          {/* Next payout row */}
-          {nextPayout && (
-            <View style={styles.nextPayoutRow}>
-              <View>
-                <Text style={styles.nextPayoutLabel}>Next Payout</Text>
-                <Text style={styles.nextPayoutDate}>{formatDate(nextPayout.nextPayout!)}</Text>
-                <Text style={styles.nextPayoutGroup}>{nextPayout.name}</Text>
-              </View>
-              <View style={styles.nextPayoutRight}>
-                <Text style={styles.nextPayoutLabel}>Amount</Text>
-                <Text style={styles.nextPayoutAmount}>
-                  {formatCurrency(nextPayout.contributionAmount * nextPayout.maxMembers)}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
+  {/* Next payout row */}
+  {nextPayout && (
+    <View style={styles.nextPayoutRow}>
+      <View>
+        <Text style={styles.nextPayoutLabel}>Next Payout</Text>
+        <Text style={styles.nextPayoutDate}>{formatDate(nextPayout.nextPayout!)}</Text>
+        <Text style={styles.nextPayoutGroup}>{nextPayout.name}</Text>
+      </View>
+      <View style={styles.nextPayoutRight}>
+        <Text style={styles.nextPayoutLabel}>Amount</Text>
+        <Text style={styles.nextPayoutAmount}>
+          {formatCurrency(nextPayout.contributionAmount * nextPayout.maxMembers)}
+        </Text>
+      </View>
+    </View>
+  )}
+</View>
 
         {/* Upcoming Contributions Alert */}
         {upcomingGroups.length > 0 && (
@@ -180,7 +179,6 @@ export default function HomeScreen() {
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={[styles.actionGrid, { gap: width < 360 ? Spacing.xs : Spacing.sm }]}>
             {quickActions.map((action) => {
               const itemWidth = (width - (Spacing.lg * 2) - (Spacing.sm * 3)) / 4;
@@ -307,14 +305,15 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: 20,
   },
+  activeGroupsLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 2 },
   balanceCardTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.md },
   balanceCardLeft: { flex: 1 },
   balanceCardRight: { alignItems: 'flex-end' },
   balanceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  balanceAmount: { fontSize: 25, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF' },
+  balanceAmount: { fontSize: 35, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF' },
   eyeButton: { padding: 4 },
-  activeGroupsLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 2 },
-  activeGroupsCount: { fontSize: 28, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF', textAlign: 'right' },
+  balanceCardLabel: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 2 },
+  activeGroupsCount: { fontSize: 30, fontFamily: Typography.fontFamily.bold, color: '#FFFFFF', textAlign: 'right' },
   pendingGroupsText: { fontSize: 11, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
   balanceStats: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: Spacing.md, marginBottom: Spacing.sm },
   balanceStat: { flex: 1, alignItems: 'center', paddingVertical: 4 },

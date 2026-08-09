@@ -182,12 +182,6 @@ export default function GroupDetailsScreen() {
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>{group?.name || 'Group Details'}</Text>
         <View style={{ flexDirection: 'row', gap: 0 }}>
-          <Pressable
-            style={styles.iconBtn}
-            onPress={() => router.push(`/group-chat?id=${id}&name=${encodeURIComponent(group?.name || '')}` as any)}
-          >
-            <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.primary.main} />
-          </Pressable>
           <Pressable onPress={handleShare} style={styles.iconBtn}>
             <Ionicons name="share-outline" size={22} color={Colors.primary.main} />
           </Pressable>

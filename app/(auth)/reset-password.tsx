@@ -99,12 +99,11 @@ export default function ResetPasswordScreen() {
     }
   };
 
-  const maskedPhone = params.phoneNumber
-    ? params.phoneNumber.replace(/(\+\d{1,3})(\d{3})(\d+)(\d{4})/, '$1***$4')
-    : 'your phone';
+  const maskedEmail = params.email
+    ? params.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+    : 'your email';
 
-  const deliveryMethod = params.method || 'sms';
-  const deliveryTarget = deliveryMethod === 'sms' ? maskedPhone : 'your email';
+  const deliveryTarget = maskedEmail;
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 

@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  StatusBar,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -329,44 +328,39 @@ export default function GroupChatScreen() {
     <KeyboardAvoidingView
       style={styles.safeArea}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : -(StatusBar.currentHeight || 0)}
+      keyboardVerticalOffset={0}
     >
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary.light} />
-        </Pressable>
+          <Pressable onPress={() => router.back()} style={styles.iconBtn}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text.primary.light} />
+          </Pressable>
 
-        <Pressable
-          style={styles.headerCenter}
-          onPress={() => router.push(`/group-details?id=${id}` as any)}
-        >
-          <View style={styles.headerAvatar}>
-            <Ionicons name="people" size={18} color="#fff" />
-          </View>
-          <View>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {groupName}
-            </Text>
-            <Text style={styles.headerSubtitle}>{membersOnline} members online</Text>
-          </View>
-        </Pressable>
+          <Pressable
+            style={styles.headerCenter}
+            onPress={() => router.push(`/group-details?id=${id}` as any)}
+          >
+            <View style={styles.headerAvatar}>
+              <Ionicons name="people" size={18} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {groupName}
+              </Text>
+              <Text style={styles.headerSubtitle}>{membersOnline} members online</Text>
+            </View>
+          </Pressable>
 
-        <Pressable
-          style={styles.iconBtn}
-          onPress={() => router.push(`/group-details?id=${id}` as any)}
-        >
-          <Ionicons name="information-circle-outline" size={24} color={Colors.primary.main} />
-        </Pressable>
-      </View>
+          <Pressable
+            style={styles.iconBtn}
+            onPress={() => router.push(`/group-details?id=${id}` as any)}
+          >
+            <Ionicons name="information-circle-outline" size={24} color={Colors.primary.main} />
+          </Pressable>
+        </View>
 
-      {/* ── Messages ────────────────────────────────────────────────────── */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
+        {/* ── Messages ────────────────────────────────────────────────────── */}
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -378,7 +372,7 @@ export default function GroupChatScreen() {
         />
 
         {/* ── Input Bar ───────────────────────────────────────────────── */}
-        <View style={styles.inputBar}>
+        <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}>
           <Pressable style={styles.attachBtn}>
             <Ionicons name="add-circle-outline" size={26} color={Colors.neutral[400]} />
           </Pressable>
@@ -411,10 +405,6 @@ export default function GroupChatScreen() {
             )}
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
-
-      {/* Safe area for bottom inset */}
-      <SafeAreaView style={{ backgroundColor: '#fff' }} edges={['bottom']} />
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -613,8 +603,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.sm,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: Colors.neutral[200],

@@ -78,7 +78,7 @@ export default function ForgotPasswordScreen() {
         </Pressable>
         <View style={styles.header}>
           <Text style={styles.title}>Forgot Password?</Text>
-          <Text style={styles.subtitle}>Enter your phone number and email to receive a verification code</Text>
+          <Text style={styles.subtitle}>Enter your phone number and email to receive a verification code via email</Text>
         </View>
       </View>
 

@@ -21,6 +21,7 @@ function WalletContent() {
   const { user } = useAuth();
   const { popup } = usePaystack();
   const [refreshing, setRefreshing] = useState(false);
+  const [balanceVisible, setBalanceVisible] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'all' | 'contribution' | 'payout' | 'withdrawal'>('all');
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loadingBankAccounts, setLoadingBankAccounts] = useState(false);
@@ -268,55 +269,68 @@ function WalletContent() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Hero Card ─────────────────────────────────────────────── */}
-        <View style={styles.heroCard}>
-          <Text style={styles.heroLabel}>Available Balance</Text>
-          <Text style={styles.heroAmount}>{formatCurrency(wallet?.availableBalance ?? 0)}</Text>
+{/* Wallet Page - Hero Card */}
+<View style={styles.heroCard}>
+  <Text style={styles.heroLabel}>Available Balance</Text>
+  
+  {/* Added Eye Toggle Row */}
+  <View style={styles.balanceRow}>
+    <Text style={styles.heroAmount}>
+      {balanceVisible ? formatCurrency(wallet?.availableBalance ?? 0) : '₦ *****'}
+    </Text>
+    <Pressable onPress={() => setBalanceVisible(!balanceVisible)} style={styles.eyeButton}>
+      <Ionicons name={balanceVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color="rgba(255,255,255,0.8)" />
+    </Pressable>
+  </View>
 
-          <View style={styles.statsRow}>
-            {[
-              { label: 'Locked', value: wallet?.lockedBalance ?? 0 },
-              { label: 'Contributed', value: wallet?.totalContributions ?? 0 },
-              { label: 'Received', value: wallet?.totalPayouts ?? 0 },
-            ].map((stat, i) => (
-              <View key={stat.label} style={[styles.statItem, i > 0 && styles.statItemBorder]}>
-                <Text style={styles.statLabel}>{stat.label}</Text>
-                <Text style={styles.statValue}>{formatCurrency(stat.value)}</Text>
-              </View>
-            ))}
-          </View>
+  {/* Stats Row with Visiblity Logic */}
+  <View style={styles.statsRow}>
+    {[
+      { label: 'Locked', value: wallet?.lockedBalance ?? 0 },
+      { label: 'Contributed', value: wallet?.totalContributions ?? 0 },
+      { label: 'Received', value: wallet?.totalPayouts ?? 0 },
+    ].map((stat, i) => (
+      <View key={stat.label} style={[styles.statItem, i > 0 && styles.statItemBorder]}>
+        <Text style={styles.statLabel}>{stat.label}</Text>
+        <Text style={styles.statValue}>
+          {balanceVisible ? formatCurrency(stat.value) : '*****'}
+        </Text>
+      </View>
+    ))}
+  </View>
 
-          <Pressable
-            style={[styles.fundBtn, isFunding && { opacity: 0.6 }]}
-            onPress={() => setShowFundModal(true)}
-            disabled={isFunding}
-          >
-            {isFunding
-              ? <ActivityIndicator color={Colors.primary.main} size="small" />
-              : <><Ionicons name="add-circle-outline" size={18} color={Colors.primary.main} /><Text style={styles.fundBtnText}>Fund Wallet</Text></>
-            }
-          </Pressable>
+  <Pressable
+    style={[styles.fundBtn, isFunding && { opacity: 0.6 }]}
+    onPress={() => setShowFundModal(true)}
+    disabled={isFunding}
+  >
+    {isFunding
+      ? <ActivityIndicator color={Colors.primary.main} size="small" />
+      : <><Ionicons name="add-circle-outline" size={18} color={Colors.primary.main} /><Text style={styles.fundBtnText}>Fund Wallet</Text></>
+    }
+  </Pressable>
 
-          <View style={styles.actionRow}>
-            <Pressable style={styles.actionBtn} onPress={() => setShowWithdrawModal(true)}>
-              <Ionicons name="arrow-up-outline" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Withdraw</Text>
-            </Pressable>
-            <Pressable style={styles.actionBtn} onPress={handleExport} disabled={exporting}>
-              {exporting
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Ionicons name="download-outline" size={16} color="#fff" />}
-              <Text style={styles.actionBtnText}>Export</Text>
-            </Pressable>
-            <Pressable style={styles.actionBtn} onPress={() => setShowAutoWithdrawalModal(true)}>
-              <Ionicons name="repeat-outline" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Auto</Text>
-            </Pressable>
-            <Pressable style={styles.actionBtn} onPress={() => setShowLockModal(true)}>
-              <Ionicons name="lock-closed-outline" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Lock</Text>
-            </Pressable>
-          </View>
-        </View>
+  <View style={styles.actionRow}>
+    <Pressable style={styles.actionBtn} onPress={() => setShowWithdrawModal(true)}>
+      <Ionicons name="arrow-up-outline" size={16} color="#fff" />
+      <Text style={styles.actionBtnText}>Withdraw</Text>
+    </Pressable>
+    <Pressable style={styles.actionBtn} onPress={handleExport} disabled={exporting}>
+      {exporting
+        ? <ActivityIndicator size="small" color="#fff" />
+        : <Ionicons name="download-outline" size={16} color="#fff" />}
+      <Text style={styles.actionBtnText}>Export</Text>
+    </Pressable>
+    <Pressable style={styles.actionBtn} onPress={() => setShowAutoWithdrawalModal(true)}>
+      <Ionicons name="repeat-outline" size={16} color="#fff" />
+      <Text style={styles.actionBtnText}>Auto</Text>
+    </Pressable>
+    <Pressable style={styles.actionBtn} onPress={() => setShowLockModal(true)}>
+      <Ionicons name="lock-closed-outline" size={16} color="#fff" />
+      <Text style={styles.actionBtnText}>Lock</Text>
+    </Pressable>
+  </View>
+</View>
 
         {/* ── Error Banner ──────────────────────────────────────────── */}
         {error ? (
@@ -782,6 +796,8 @@ const styles = StyleSheet.create({
   heroLabel: { fontSize: 13, fontFamily: Typography.fontFamily.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 6 },
   heroAmount: { fontSize: 36, fontFamily: Typography.fontFamily.bold, color: '#fff', marginBottom: 20 },
 
+  eyeButton: { padding: 4 },
+  balanceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   statsRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: 16, marginBottom: 20 },
   statItem: { flex: 1, alignItems: 'center' },
   statItemBorder: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.2)' },
