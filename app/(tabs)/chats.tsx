@@ -1,3 +1,6 @@
+/**
+ * Chats tab — renders the group chats list as a bottom navigation tab.
+ */
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -10,7 +13,6 @@ import {
   TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/colors';
 import { Typography } from '@/constants/typography';
@@ -20,8 +22,8 @@ import { Group } from '@/services/groupService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Deterministic avatar color from name
 const AVATAR_COLORS = ['#3d71d9', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2'];
+
 function getAvatarColor(name: string): string {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -37,23 +39,17 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-// Placeholder last-message preview (will come from API later)
 const PREVIEW_MESSAGES: Record<string, { text: string; time: string; unread: number }> = {};
 
 function getPreview(group: Group) {
   if (PREVIEW_MESSAGES[group._id]) return PREVIEW_MESSAGES[group._id];
-  // Fallback placeholder based on group status
   const statusText: Record<string, string> = {
     active: 'Group is active — tap to chat',
     pending: 'Waiting for members to join…',
     completed: 'This group has completed its cycle',
     cancelled: 'This group was cancelled',
   };
-  return {
-    text: statusText[group.status] ?? 'No messages yet',
-    time: '',
-    unread: 0,
-  };
+  return { text: statusText[group.status] ?? 'No messages yet', time: '', unread: 0 };
 }
 
 function getStatusDot(status: string): string {
@@ -65,7 +61,7 @@ function getStatusDot(status: string): string {
   }
 }
 
-// ─── Row component ────────────────────────────────────────────────────────────
+// ─── Row ──────────────────────────────────────────────────────────────────────
 
 function GroupChatRow({ group }: { group: Group }) {
   const preview = getPreview(group);
@@ -80,23 +76,16 @@ function GroupChatRow({ group }: { group: Group }) {
         )
       }
     >
-      {/* Avatar */}
       <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
         <Text style={styles.avatarText}>{getInitials(group.name)}</Text>
-        {/* Status dot */}
         <View style={[styles.statusDot, { backgroundColor: getStatusDot(group.status) }]} />
       </View>
 
-      {/* Content */}
       <View style={styles.rowContent}>
         <View style={styles.rowTop}>
-          <Text style={styles.groupName} numberOfLines={1}>
-            {group.name}
-          </Text>
+          <Text style={styles.groupName} numberOfLines={1}>{group.name}</Text>
           <View style={styles.rowMeta}>
-            {preview.time ? (
-              <Text style={styles.timeText}>{preview.time}</Text>
-            ) : null}
+            {preview.time ? <Text style={styles.timeText}>{preview.time}</Text> : null}
             {preview.unread > 0 && (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadText}>
@@ -108,9 +97,7 @@ function GroupChatRow({ group }: { group: Group }) {
         </View>
 
         <View style={styles.rowBottom}>
-          <Text style={styles.previewText} numberOfLines={1}>
-            {preview.text}
-          </Text>
+          <Text style={styles.previewText} numberOfLines={1}>{preview.text}</Text>
           <View style={styles.memberPill}>
             <Ionicons name="people-outline" size={11} color={Colors.neutral[500]} />
             <Text style={styles.memberCount}>
@@ -125,47 +112,31 @@ function GroupChatRow({ group }: { group: Group }) {
   );
 }
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function GroupChatsScreen() {
+export default function ChatsTab() {
   const { groups, isLoading, fetchGroups, refreshGroups } = useGroups();
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetchGroups();
-  }, []);
+  useEffect(() => { fetchGroups(); }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    try {
-      await refreshGroups();
-    } finally {
-      setRefreshing(false);
-    }
+    try { await refreshGroups(); } finally { setRefreshing(false); }
   };
 
   const filtered = (Array.isArray(groups) ? groups : []).filter(g =>
     g.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Sort: active first, then pending, then others
   const sorted = [...filtered].sort((a, b) => {
-    const order = { active: 0, pending: 1, completed: 2, cancelled: 3 };
+    const order: Record<string, number> = { active: 0, pending: 1, completed: 2, cancelled: 3 };
     return (order[a.status] ?? 9) - (order[b.status] ?? 9);
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text.primary.light} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Group Chats</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
+    <View style={styles.container}>
       {/* Search */}
       <View style={styles.searchBar}>
         <Ionicons name="search-outline" size={18} color={Colors.neutral[400]} />
@@ -184,7 +155,7 @@ export default function GroupChatsScreen() {
         )}
       </View>
 
-      {/* List */}
+      {/* List / Empty / Loading */}
       {isLoading && groups.length === 0 ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary.main} />
@@ -202,10 +173,7 @@ export default function GroupChatsScreen() {
           </Text>
           {!search && (
             <View style={styles.emptyActions}>
-              <Pressable
-                style={styles.emptyBtn}
-                onPress={() => router.push('/create-group')}
-              >
+              <Pressable style={styles.emptyBtn} onPress={() => router.push('/create-group')}>
                 <Ionicons name="add-outline" size={16} color="#fff" />
                 <Text style={styles.emptyBtnText}>Create Group</Text>
               </Pressable>
@@ -238,30 +206,14 @@ export default function GroupChatsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[200],
-  },
-  iconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: {
-    fontSize: 17,
-    fontFamily: Typography.fontFamily.bold,
-    color: Colors.text.primary.light,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
 
   searchBar: {
     flexDirection: 'row',
@@ -305,11 +257,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  emptyActions: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.md,
-  },
+  emptyActions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -330,7 +278,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Row
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -429,6 +376,6 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: Colors.neutral[100],
-    marginLeft: 50 + Spacing.base + Spacing.md, // align with text, skip avatar
+    marginLeft: 50 + Spacing.base + Spacing.md,
   },
 });

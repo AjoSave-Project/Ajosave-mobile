@@ -16,13 +16,14 @@ import ProgressBar from '@/components/ui/ProgressBar';
 import GroupPreviewCard from '@/components/GroupPreviewCard';
 import GroupCreationSuccess from '@/components/GroupCreationSuccess';
 
-const MAX_MEMBERS = ['3 Members', '5 Members', '10 Members', '15 Members', '20 Members', 'Custom'];
-const FREQUENCIES = ['Daily', 'Weekly', 'Bi - Weekly', 'Monthly'];
+const MAX_MEMBERS = ['5 Members', '10 Members', '20 Members', '50 Members', '100 Members', 'Custom'];
+const FREQUENCIES = ['Daily', 'Weekly', 'Bi-Weekly', 'Monthly', 'Bi-Monthly'];
 const DURATIONS = ['3 Months', '6 Months', '12 Months', '18 Months', '24 Months', 'Custom'];
 const PAYOUT_ORDERS = [
   { value: 'random', label: 'Random' },
   { value: 'firstCome', label: 'First come, First served' },
   { value: 'bidding', label: 'Bidding system' },
+  { value: 'vote', label: 'Group vote' },
 ];
 
 export default function CreateGroupScreen() {
@@ -58,9 +59,17 @@ export default function CreateGroupScreen() {
     const newErrors: Record<string, string> = {};
     const nameError = validateField('groupName', formData.name);
     if (nameError) newErrors.name = nameError;
-    const maxMembersError = validateField('maxMembers', formData.maxMembers);
-    if (maxMembersError) newErrors.maxMembers = maxMembersError;
-    
+
+    if (showCustomMaxMembers) {
+      const val = parseInt(formData.customMaxMembers);
+      if (!formData.customMaxMembers || isNaN(val) || val < 1 || val > 100) {
+        newErrors.customMaxMembers = 'Members must be between 1 and 100';
+      }
+    } else {
+      const maxMembersError = validateField('maxMembers', formData.maxMembers);
+      if (maxMembersError) newErrors.maxMembers = maxMembersError;
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return false;
@@ -222,7 +231,7 @@ export default function CreateGroupScreen() {
                 {showCustomMaxMembers && (
                   <TextInput
                     style={[styles.input, styles.customInput, errors.customMaxMembers && styles.inputError]}
-                    placeholder="Enter number of members"
+                    placeholder="Enter number of members (1–100)"
                     placeholderTextColor={Colors.neutral[400]}
                     value={formData.customMaxMembers}
                     onChangeText={(v) => handleChange('customMaxMembers', v.replace(/\D/g, ''))}

@@ -76,7 +76,7 @@ export default function HomeScreen() {
     { icon: 'business-outline', label: 'Add Bank', onPress: () => router.push('/add-bank-account') },
     { icon: 'grid-outline', label: 'My Groups', onPress: () => router.push('/(tabs)/groups') },
     { icon: 'list-outline', label: 'Transactions', onPress: () => router.push('/(tabs)/wallet') },
-    { icon: 'chatbubble-ellipses-outline', label: 'Group Chat', onPress: () => router.push('/group-chats' as any) },
+    { icon: 'chatbubble-ellipses-outline', label: 'Group Chat', onPress: () => router.push('/(tabs)/chats') },
   ];
 
   return (

@@ -4,7 +4,6 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-
 import { HapticTab } from '@/components/haptic-tab';
 import { TabHeader } from '@/components/TabHeader';
 import { Colors } from '@/constants/colors';
@@ -110,6 +109,16 @@ export default function TabLayout() {
           header: () => <TabHeader title="Wallet" />,
           tabBarIcon: ({ focused }) => (
             <TabBarIcon name={focused ? "wallet" : "wallet-outline"} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chats"
+        options={{
+          title: 'Chats',
+          header: () => <TabHeader title="Group Chats" />,
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon name={focused ? "chatbubbles" : "chatbubbles-outline"} focused={focused} />
           ),
         }}
       />
