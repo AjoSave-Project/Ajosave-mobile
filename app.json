@@ -2,7 +2,7 @@
   "expo": {
     "name": "AjosaveMobile",
     "slug": "AjosaveMobile",
-    "version": "3.2.1",
+    "version": "5.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/favicon.png",
     "scheme": "ajosavemobile",
@@ -18,7 +18,7 @@
       "softwareKeyboardLayoutMode": "pan",
       "predictiveBackGestureEnabled": false,
       "package": "com.ajosave.AjosaveMobile",
-      "versionCode": 1,
+      "versionCode": 5,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
